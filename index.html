@@ -46,29 +46,26 @@
             align-items: center;
             margin-bottom: 12px;
             padding: 0 6px;
-            flex-wrap: wrap;
-            gap: 10px;
         }
         .brand {
-            font-size: 0.6rem;
+            font-size: 0.4rem;
             font-weight: 600;
             background: rgba(0,0,0,0.55);
             backdrop-filter: blur(6px);
-            padding: 4px 10px;
+            padding: 3px 8px;
             border-radius: 40px;
             color: #ffdb7e;
             border-left: 2px solid #d92525;
             font-family: monospace;
-            text-align: center;
-            flex: 1;
+            display: inline-block;
         }
         .brand span {
             background: #a51c1c;
             color: white;
-            padding: 1px 6px;
+            padding: 1px 5px;
             border-radius: 30px;
-            margin-left: 5px;
-            font-size: 0.55rem;
+            margin-left: 4px;
+            font-size: 0.35rem;
         }
         .game-title {
             font-size: 1.1rem;
@@ -99,30 +96,32 @@
             background: #0f1f2ad9;
             backdrop-filter: blur(8px);
             margin-top: 12px;
-            padding: 5px 10px;
+            padding: 4px 8px;
             border-radius: 60px;
             color: white;
             font-weight: bold;
-            gap: 6px;
-            flex-wrap: wrap;
+            gap: 4px;
+            flex-wrap: nowrap;
             font-family: monospace;
         }
         .score-box, .multiplier-box, .invincible-box, .record-box {
             background: #00000077;
-            padding: 3px 8px;
+            padding: 2px 6px;
             border-radius: 40px;
             display: flex;
             align-items: center;
-            gap: 4px;
-            font-size: 0.7rem;
+            gap: 3px;
+            font-size: 0.5rem;
             flex: 1;
             justify-content: center;
+            white-space: nowrap;
         }
         .badge {
             background: #ffaa33;
             color: #1e2a2e;
             border-radius: 30px;
-            padding: 1px 6px;
+            padding: 1px 5px;
+            font-size: 0.5rem;
         }
         .controls-hint {
             font-size: 0.65rem;
@@ -232,8 +231,8 @@
         <canvas id="gameCanvas" width="1000" height="700" style="width:100%; height:auto;"></canvas>
 
         <div class="stats-panel">
-            <div class="score-box">📊 ЖЕЗЛОВ: <span id="scoreValue" style="font-size:1rem; font-weight:bold;">0</span></div>
-            <div class="record-box">🏆 РЕКОРД: <span id="recordValue" style="font-size:1rem; font-weight:bold;">0</span></div>
+            <div class="score-box">📊 ЖЕЗЛОВ: <span id="scoreValue" style="font-size:0.8rem; font-weight:bold;">0</span></div>
+            <div class="record-box">🏆 РЕКОРД: <span id="recordValue" style="font-size:0.8rem; font-weight:bold;">0</span></div>
             <div class="multiplier-box">✨ РЕЖИМ: <span id="multiplierBadge" class="badge">x1</span></div>
             <div class="invincible-box">🛡️ БРОНЯ: <span id="invincibleBadge">НЕТ</span></div>
         </div>
@@ -425,11 +424,12 @@
             }
         }
         
+        // Изменение скорости: каждые 5 секунд (300 кадров) на +10 км/ч до 250
         function updateSpeedByTime() {
             if (!gameRunning || isPaused) return;
-            if (frameCounter % 600 === 0 && frameCounter !== 0) {
-                if (currentSpeedKmh < 220) {
-                    currentSpeedKmh = Math.min(220, currentSpeedKmh + 10);
+            if (frameCounter % 300 === 0 && frameCounter !== 0) {
+                if (currentSpeedKmh < 250) {
+                    currentSpeedKmh = Math.min(250, currentSpeedKmh + 10);
                     currentSpeed = kmhToSpeed(currentSpeedKmh);
                     spawnGap = Math.max(38, spawnGap - 0.5);
                 }
@@ -577,7 +577,7 @@
         function drawSpeedometer() {
             const x = GAME_WIDTH - 200;
             const y = 15;
-            const r = 33; // увеличен в 1.5 раза (было 22)
+            const r = 33;
             ctx.beginPath();
             ctx.arc(x + r, y + r, r, 0, Math.PI * 2);
             ctx.fillStyle = "#1a1a1a";
@@ -597,7 +597,7 @@
                 ctx.strokeStyle = "#ccc";
                 ctx.stroke();
             }
-            let angleSpeed = -Math.PI/2 + (currentSpeedKmh / 220) * Math.PI;
+            let angleSpeed = -Math.PI/2 + (currentSpeedKmh / 250) * Math.PI;
             let arrowX = x + r + Math.cos(angleSpeed) * (r - 12);
             let arrowY = y + r + Math.sin(angleSpeed) * (r - 12);
             ctx.beginPath();
@@ -630,11 +630,7 @@
         
         function drawUItext() {
             drawSpeedometer();
-            if (multiplierActive) {
-                ctx.font = "bold 24px monospace";
-                ctx.fillStyle = "#ffe484";
-                ctx.fillText("x2 АКТИВЕН!", GAME_WIDTH-180, 95);
-            }
+            // удалена дублирующая надпись "x2 АКТИВЕН!"
             if (isPaused && gameRunning) {
                 ctx.font = "bold 42px monospace";
                 ctx.fillStyle = "#ffffaa";
@@ -747,13 +743,13 @@
             rulesDiv.className = 'rules-overlay';
             rulesDiv.innerHTML = `
                 <div class="rules-card">
-                    <h2>🚓 ДОБРО ПОЖАЛОВАТЬ 🚓</h2>
+                    <h2>🚓 ДОБРО ПОЖАЛОВАТЬ</h2>
                     <ul>
                         <li>🎯 Цель: собирайте чёрно-белые жезлы.</li>
                         <li>✨ Бонус X2 — временное удвоение очков.</li>
                         <li>⚠️ Не наезжайте на ямы и искусственные неровности.</li>
                         <li>🛡️ Бронежилет — временная неуязвимость.</li>
-                        <li>📈 Увеличение скорости в процессе игры.</li>
+                        <li>📈 Скорость увеличивается каждые 5 секунд до 250 км/ч.</li>
                         <li>🎮 Управление: касания по левой/правой половине экрана.</li>
                         <li>⏸️ Кнопка "Пауза" — остановить игру.</li>
                     </ul>
