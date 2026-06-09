@@ -40,13 +40,12 @@
             height: auto;
             background: #1b2f24;
         }
-        /* Новая шапка: центрированный текст + кнопка паузы справа */
         .game-header {
             margin-bottom: 12px;
             position: relative;
             display: flex;
             justify-content: space-between;
-            align-items: flex-end;
+            align-items: center;
             flex-wrap: wrap;
             gap: 10px;
         }
@@ -55,7 +54,7 @@
             text-align: center;
         }
         .main-title {
-            font-size: 1.3rem;
+            font-size: 0.87rem;
             font-weight: bold;
             background: rgba(0, 0, 0, 0.6);
             display: inline-block;
@@ -68,7 +67,7 @@
             margin-bottom: 4px;
         }
         .subtitle {
-            font-size: 0.65rem;
+            font-size: 0.325rem;
             font-weight: 600;
             background: rgba(0,0,0,0.55);
             backdrop-filter: blur(6px);
@@ -84,20 +83,25 @@
             padding: 2px 8px;
             border-radius: 30px;
             margin-left: 6px;
-            font-size: 0.6rem;
+            font-size: 0.5rem;
         }
-        .pause-btn {
+        .exit-btn, .pause-btn {
             background: rgba(0,0,0,0.6);
             border: none;
             color: white;
-            font-size: 0.9rem;
             font-weight: bold;
-            padding: 6px 14px;
+            padding: 6px 12px;
             border-radius: 40px;
             cursor: pointer;
             backdrop-filter: blur(4px);
             font-family: monospace;
-            margin-bottom: 6px;
+        }
+        .exit-btn {
+            color: #ffaa88;
+            font-size: 0.8rem;
+        }
+        .pause-btn {
+            font-size: 0.9rem;
         }
         .stats-panel {
             display: flex;
@@ -142,105 +146,140 @@
             border-radius: 40px;
             text-align: center;
         }
-        .rules-overlay {
+        /* Модальные окна */
+        .modal {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.94);
-            backdrop-filter: blur(6px);
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(5px);
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 3000;
+            z-index: 4000;
             font-family: monospace;
-            padding: 20px;
         }
-        .rules-card {
+        .modal-card {
             background: #11212e;
             border-radius: 40px;
-            padding: 20px 24px;
-            max-width: 480px;
-            width: 100%;
+            padding: 24px;
+            width: 320px;
             text-align: center;
             border: 2px solid #ffaa55;
-            box-shadow: 0 0 30px rgba(255, 180, 60, 0.2);
-            color: #f0f0f0;
+            color: white;
         }
-        .rules-card h2 {
-            color: #ffaa55;
-            font-size: 1.6rem;
-            margin-top: 0;
+        .modal-card input {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            background: #1e3a4a;
+            border: 1px solid #ffaa55;
+            border-radius: 30px;
+            color: white;
+            font-family: monospace;
+            font-size: 1rem;
+            text-align: center;
         }
-        .rules-card ul {
-            text-align: left;
-            font-size: 0.85rem;
-            line-height: 1.5;
-            padding-left: 20px;
-        }
-        .rules-card li {
-            margin: 10px 0;
-        }
-        .rules-card button {
+        .modal-card button {
             background: #d92525;
             border: none;
-            padding: 12px 28px;
-            border-radius: 60px;
-            font-size: 1.2rem;
+            padding: 8px 20px;
+            border-radius: 40px;
+            font-size: 1rem;
             font-weight: bold;
             color: white;
-            margin-top: 20px;
+            margin: 8px;
             cursor: pointer;
             font-family: monospace;
-            width: 100%;
         }
+        .modal-card button.secondary {
+            background: #2a5a6a;
+        }
+        .modal-card .guest-btn {
+            background: #2a6b2a;
+        }
+        .error-msg {
+            color: #ffaa88;
+            font-size: 0.8rem;
+            margin: 5px 0;
+        }
+        .rating-list {
+            max-height: 400px;
+            overflow-y: auto;
+            text-align: left;
+            margin: 15px 0;
+            font-size: 0.8rem;
+        }
+        .rating-item {
+            padding: 5px;
+            border-bottom: 1px solid #3a5a6a;
+        }
+        .top1 { background: #ffd70022; color: gold; font-weight: bold; }
+        .top2 { background: #c0c0c022; color: silver; font-weight: bold; }
+        .top3 { background: #cd7f3222; color: #cd7f32; font-weight: bold; }
     </style>
     <script>
-        (function() {
-            const favCanvas = document.createElement('canvas');
-            favCanvas.width = 32;
-            favCanvas.height = 32;
-            const fctx = favCanvas.getContext('2d');
-            fctx.imageSmoothingEnabled = false;
-            fctx.fillStyle = "#1e2e38";
-            fctx.fillRect(0, 0, 32, 32);
-            const staffW = 24;
-            const staffH = 5;
-            const staffX = (32 - staffW) / 2;
-            const staffY = (32 - staffH) / 2;
-            fctx.fillStyle = "#111";
-            fctx.fillRect(staffX, staffY, staffW, staffH);
-            const stripeCount = 12;
-            const step = staffW / stripeCount;
-            for (let i = 0; i < stripeCount; i++) {
-                fctx.fillStyle = (i % 2 === 0) ? "#f4f4f4" : "#111";
-                fctx.fillRect(staffX + i * step, staffY, step - 0.5, staffH);
+        // Хранение данных пользователей в localStorage
+        const DB_KEY = 'gibdd_users';
+        function getUsers() {
+            const data = localStorage.getItem(DB_KEY);
+            return data ? JSON.parse(data) : {};
+        }
+        function saveUsers(users) {
+            localStorage.setItem(DB_KEY, JSON.stringify(users));
+        }
+        function registerUser(login, password, confirm) {
+            if (!login || !password) return "Заполните все поля";
+            if (password !== confirm) return "Пароли не совпадают";
+            const users = getUsers();
+            if (users[login]) return "Пользователь уже существует";
+            users[login] = { password: password, record: 0 };
+            saveUsers(users);
+            return null;
+        }
+        function loginUser(login, password) {
+            const users = getUsers();
+            if (!users[login]) return "Неверный логин";
+            if (users[login].password !== password) return "Неверный пароль";
+            return null;
+        }
+        function getUserRecord(login) {
+            const users = getUsers();
+            return users[login] ? users[login].record : 0;
+        }
+        function updateUserRecord(login, newRecord) {
+            if (!login) return;
+            const users = getUsers();
+            if (users[login] && newRecord > users[login].record) {
+                users[login].record = newRecord;
+                saveUsers(users);
             }
-            fctx.fillStyle = "#ff3333";
-            fctx.fillRect(staffX + staffW/2 - 3, staffY - 4, 6, 4);
-            fctx.fillStyle = "#3366ff";
-            fctx.fillRect(staffX + staffW - 4, staffY + 1, 3, 3);
-            const link = document.createElement('link');
-            link.rel = 'icon';
-            link.href = favCanvas.toDataURL();
-            document.head.appendChild(link);
-        })();
+        }
+        function getTopPlayers() {
+            const users = getUsers();
+            const list = [];
+            for (let login in users) {
+                list.push({ login, record: users[login].record });
+            }
+            list.sort((a,b) => b.record - a.record);
+            return list.slice(0, 100);
+        }
     </script>
 </head>
 <body>
 <div>
-    <div class="game-container">
+    <div class="game-container" id="gameContainer" style="display: none;">
         <div class="game-header">
+            <button class="exit-btn" id="exitBtn">🚪 Выйти</button>
             <div class="title-group">
                 <div class="main-title">ПАТРУЛЬ ДПС</div>
                 <div class="subtitle">by Chilikin <span>разработчик</span></div>
             </div>
             <button class="pause-btn" id="pauseBtn">⏸️ ПАУЗА</button>
         </div>
-
         <canvas id="gameCanvas" width="1000" height="700" style="width:100%; height:auto;"></canvas>
-
         <div class="stats-panel">
             <div class="score-box">📊 ЖЕЗЛОВ: <span id="scoreValue" style="font-size:0.8rem; font-weight:bold;">0</span></div>
             <div class="record-box">🏆 РЕКОРД: <span id="recordValue" style="font-size:0.8rem; font-weight:bold;">0</span></div>
@@ -249,526 +288,569 @@
         </div>
         <div style="text-align: center; margin-top: 10px;">
             <div class="controls-hint">👆 КАСАЙСЯ ЛЕВОЙ / ПРАВОЙ ПОЛОВИНЫ ЭКРАНА</div>
+            <button id="ratingBtn" style="background:#000000aa; border:none; color:white; border-radius:40px; padding:4px 12px; margin-top:6px; font-family:monospace;">🏆 РЕЙТИНГ ТОП-100</button>
         </div>
     </div>
 </div>
 
 <script>
-    (function() {
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        ctx.imageSmoothingEnabled = false;
-        
-        const GAME_WIDTH = 1000;
-        const GAME_HEIGHT = 700;
-        canvas.width = GAME_WIDTH;
-        canvas.height = GAME_HEIGHT;
-        
-        const LANE_WIDTH = 300;
-        const LEFT_OFFSET = 50;
-        const LANE_POSITIONS = [
-            LEFT_OFFSET + LANE_WIDTH/2,
-            LEFT_OFFSET + LANE_WIDTH/2 + LANE_WIDTH,
-            LEFT_OFFSET + LANE_WIDTH/2 + 2*LANE_WIDTH
-        ];
-        
-        const CAR_WIDTH = 126;
-        const CAR_HEIGHT = 144;
-        const CAR_Y = GAME_HEIGHT - CAR_HEIGHT - 25;
-        
-        let gameRunning = false;
-        let isPaused = false;
-        let animationId = null;
-        let score = 0;
-        let maxScore = 0;
-        
-        let currentSpeedKmh = 60;
-        let currentSpeed = 3.2;
-        let frameCounter = 0;
-        let spawnGap = 55;
-        
-        let invincibleActive = false;
-        let invincibleFramesLeft = 0;
-        let multiplierActive = false;
-        let multiplierTimer = 0;
-        
-        let roadObjects = [];
-        let currentLane = 1;
-        
-        const TYPE_STAFF = 'staff';
-        const TYPE_PIT = 'pit';
-        const TYPE_BUMP = 'bump';
-        const TYPE_VEST = 'vest';
-        const TYPE_MULTI = 'multi';
-        
-        const OBJECT_SIZES = {
-            staff: { w: 72, h: 8 },
-            pit: { w: 195, h: 195 },
-            bump: { w: 255, h: 27 },
-            vest: { w: 96, h: 126 },
-            multi: { w: 60, h: 60 }
+    // ---------- АВТОРИЗАЦИЯ И РЕГИСТРАЦИЯ (модальные окна без alert) ----------
+    let currentUser = null;
+    let guestMode = false;
+
+    function showMessage(title, text, onClose = null) {
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-card">
+                <h2>${title}</h2>
+                <p>${text}</p>
+                <button id="msgOkBtn">ОК</button>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        modal.querySelector('#msgOkBtn').onclick = () => {
+            modal.remove();
+            if (onClose) onClose();
         };
-        
-        const scoreSpan = document.getElementById('scoreValue');
-        const recordSpan = document.getElementById('recordValue');
-        const multiplierBadge = document.getElementById('multiplierBadge');
-        const invincibleSpan = document.getElementById('invincibleBadge');
-        const pauseBtn = document.getElementById('pauseBtn');
-        
-        function kmhToSpeed(kmh) {
-            return kmh * (3.2 / 60);
-        }
-        
-        function updateUI() {
-            scoreSpan.innerText = score;
-            recordSpan.innerText = maxScore;
-            multiplierBadge.innerText = multiplierActive ? 'x2' : 'x1';
-            multiplierBadge.style.background = multiplierActive ? '#ffaa44' : '#ffffffcc';
-            if (invincibleActive) {
-                let secondsLeft = Math.ceil(invincibleFramesLeft / 60);
-                secondsLeft = Math.max(0, secondsLeft);
-                invincibleSpan.innerHTML = `${secondsLeft} сек 🛡️`;
-                invincibleSpan.style.color = '#b3ffcf';
-            } else {
-                invincibleSpan.innerHTML = 'НЕТ';
-                invincibleSpan.style.color = '#ffa098';
-            }
-        }
-        
-        function addScore(amount) {
-            if (!gameRunning || isPaused) return;
-            let final = multiplierActive ? amount * 2 : amount;
-            score += final;
-            if (score > maxScore) maxScore = score;
-            updateUI();
-        }
-        
-        function activateVest() {
-            if (!gameRunning || isPaused) return;
-            invincibleActive = true;
-            invincibleFramesLeft = 300;
-            updateUI();
-        }
-        
-        function activateMultiplier() {
-            if (!gameRunning || isPaused) return;
-            multiplierActive = true;
-            multiplierTimer = 380;
-            updateUI();
-        }
-        
-        function spawnObject() {
-            if (!gameRunning || isPaused) return;
-            let r = Math.random();
-            let type;
-            if (r < 0.55) type = TYPE_STAFF;
-            else if (r < 0.82) type = Math.random() < 0.6 ? TYPE_PIT : TYPE_BUMP;
-            else type = Math.random() < 0.6 ? TYPE_VEST : TYPE_MULTI;
-            
-            let lane = Math.floor(Math.random() * 3);
-            let size = OBJECT_SIZES[type];
-            let w = size.w;
-            let h = size.h;
-            let x = LANE_POSITIONS[lane] - w/2;
-            roadObjects.push({ type, x, y: -h, w, h, angle: 0 });
-        }
-        
-        function updateObjects() {
-            if (!gameRunning || isPaused) return;
-            const carX = LANE_POSITIONS[currentLane] - CAR_WIDTH/2;
-            const carRect = { x: carX, y: CAR_Y, w: CAR_WIDTH, h: CAR_HEIGHT };
-            
-            for (let i=0; i<roadObjects.length; i++) {
-                let obj = roadObjects[i];
-                obj.y += currentSpeed;
-                if (obj.type === TYPE_STAFF) obj.angle = (obj.angle || 0) + 0.12;
-                
-                let objRect = { x: obj.x, y: obj.y, w: obj.w, h: obj.h };
-                if (obj.y + obj.h > CAR_Y && obj.y < CAR_Y + CAR_HEIGHT &&
-                    objRect.x < carRect.x + carRect.w && objRect.x + objRect.w > carRect.x) {
-                    
-                    if (obj.type === TYPE_STAFF) {
-                        addScore(1);
-                        roadObjects.splice(i,1); i--; continue;
-                    }
-                    else if (obj.type === TYPE_PIT || obj.type === TYPE_BUMP) {
-                        if (invincibleActive) {
-                            roadObjects.splice(i,1); i--; continue;
-                        } else {
-                            gameRunning = false;
-                            endGame();
-                            return;
-                        }
-                    }
-                    else if (obj.type === TYPE_VEST) {
-                        activateVest();
-                        roadObjects.splice(i,1); i--; continue;
-                    }
-                    else if (obj.type === TYPE_MULTI) {
-                        activateMultiplier();
-                        roadObjects.splice(i,1); i--; continue;
-                    }
-                }
-                if (obj.y > GAME_HEIGHT + 150) {
-                    roadObjects.splice(i,1); i--;
-                }
-            }
-        }
-        
-        function updateTimers() {
-            if (!gameRunning || isPaused) return;
-            if (multiplierActive) {
-                multiplierTimer--;
-                if (multiplierTimer <= 0) { multiplierActive = false; updateUI(); }
-            }
-            if (invincibleActive) {
-                invincibleFramesLeft--;
-                if (invincibleFramesLeft <= 0) {
-                    invincibleActive = false;
-                    updateUI();
-                } else {
-                    updateUI();
-                }
-            }
-        }
-        
-        function updateSpeedByTime() {
-            if (!gameRunning || isPaused) return;
-            if (frameCounter % 300 === 0 && frameCounter !== 0) {
-                if (currentSpeedKmh < 250) {
-                    currentSpeedKmh = Math.min(250, currentSpeedKmh + 10);
-                    currentSpeed = kmhToSpeed(currentSpeedKmh);
-                    spawnGap = Math.max(38, spawnGap - 0.5);
-                }
-            }
-        }
-        
-        function trySpawn() {
-            if (!gameRunning || isPaused) return;
-            frameCounter++;
-            updateSpeedByTime();
-            let gap = Math.max(38, spawnGap - Math.floor(score / 100));
-            if (frameCounter % gap === 0) {
-                spawnObject();
-                if (Math.random() < 0.2 && currentSpeedKmh > 100) spawnObject();
-            }
-        }
-        
-        // Отрисовка
-        function drawRoad() {
-            ctx.fillStyle = "#2a3a2e";
-            ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-            ctx.fillStyle = "#1f2c24";
-            ctx.fillRect(LEFT_OFFSET, 0, GAME_WIDTH - 2*LEFT_OFFSET, GAME_HEIGHT);
-            ctx.fillStyle = "#ad9e6b";
-            ctx.fillRect(LEFT_OFFSET-5, 0, 5, GAME_HEIGHT);
-            ctx.fillRect(GAME_WIDTH-LEFT_OFFSET, 0, 5, GAME_HEIGHT);
-            ctx.beginPath();
-            ctx.strokeStyle = "#f9f3cf";
-            ctx.lineWidth = 5;
-            ctx.setLineDash([25, 30]);
-            for (let i = 1; i < 3; i++) {
-                let lineX = LEFT_OFFSET + i * LANE_WIDTH;
-                ctx.beginPath();
-                ctx.moveTo(lineX, 0);
-                ctx.lineTo(lineX, GAME_HEIGHT);
-                ctx.stroke();
-            }
-            ctx.setLineDash([]);
-        }
-        
-        function drawStaff(x, y, w, h, angle) {
-            ctx.save();
-            ctx.translate(x + w/2, y + h/2);
-            ctx.rotate(Math.sin(angle) * 0.5);
-            ctx.fillStyle = "#111";
-            ctx.fillRect(-w/2, -h/2, w, h);
-            let step = w / 12;
-            for (let i = 0; i < 12; i++) {
-                ctx.fillStyle = (i % 2 === 0) ? "#f4f4f4" : "#111";
-                ctx.fillRect(-w/2 + i*step, -h/2, step-0.5, h);
-            }
-            ctx.restore();
-        }
-        
-        function drawBump(x, y, w, h) {
-            ctx.fillStyle = "#555";
-            ctx.fillRect(x, y+6, w, h);
-            ctx.fillStyle = "#FFCC00";
-            ctx.fillRect(x, y+6, 9, h);
-            ctx.fillRect(x+w-9, y+6, 9, h);
-            ctx.fillStyle = "#777";
-            for (let i=0; i<6; i++) ctx.fillRect(x+18 + i*38, y+12, 9, h-12);
-        }
-        
-        function drawPit(x, y, w, h) {
-            let cx = x + w/2, cy = y + h/2;
-            ctx.beginPath();
-            ctx.ellipse(cx, cy, w/2, h/2.2, 0, 0, Math.PI*2);
-            ctx.fillStyle = "#2b2b2b";
-            ctx.fill();
-            ctx.beginPath();
-            ctx.ellipse(cx, cy+3, w/2-12, h/2.8, 0, 0, Math.PI*2);
-            ctx.fillStyle = "#111";
-            ctx.fill();
-            ctx.fillStyle = "#5a4a3a";
-            ctx.fillRect(x+30, y+18, 12, 5);
-            ctx.fillRect(x+w-60, y+27, 18, 5);
-            ctx.fillRect(x+75, y+h-18, 30, 3);
-        }
-        
-        function drawVest(x, y, w, h) {
-            ctx.fillStyle = "#1a2b4c";
-            ctx.fillRect(x, y, w, h);
-            ctx.fillStyle = "#c0c0c0";
-            ctx.fillRect(x+12, y+18, w-24, 12);
-            ctx.fillRect(x+12, y+h-24, w-24, 12);
-            ctx.fillStyle = "#FFCC00";
-            ctx.fillRect(x+30, y+42, 36, 24);
-            ctx.fillStyle = "#000";
-            ctx.font = "bold 20px monospace";
-            ctx.fillText("ДПС", x+38, y+63);
-            ctx.fillStyle = "#2a3d6e";
-            ctx.fillRect(x+12, y+78, 24, 24);
-            ctx.fillRect(x+w-36, y+78, 24, 24);
-            ctx.fillStyle = "#aaa";
-            ctx.fillRect(x+3, y+57, 9, 12);
-            ctx.fillRect(x+w-12, y+57, 9, 12);
-        }
-        
-        function drawMulti(x, y, w, h) {
-            ctx.font = "bold 42px monospace";
-            ctx.fillStyle = "#FF0000";
-            ctx.fillText("X", x+6, y+45);
-            ctx.fillStyle = "#FFFF00";
-            ctx.fillText("2", x+33, y+48);
-        }
-        
-        function drawCar(x, y) {
-            ctx.fillStyle = "#f5f5f5";
-            ctx.fillRect(x+12, y+30, 102, 108);
-            ctx.fillStyle = "#3a4f66";
-            ctx.fillRect(x+27, y+42, 27, 42);
-            ctx.fillRect(x+72, y+42, 27, 42);
-            ctx.fillStyle = "#1f4880";
-            ctx.fillRect(x+12, y+90, 102, 18);
-            ctx.fillStyle = "#fff";
-            ctx.font = "bold 15px monospace";
-            ctx.fillText("ДПС", x+48, y+105);
-            ctx.font = "12px monospace";
-            ctx.fillStyle = "#ffdd99";
-            ctx.fillText("ПОЛИЦИЯ", x+39, y+117);
-            ctx.fillStyle = "#d33";
-            ctx.fillRect(x+18, y+78, 15, 18);
-            ctx.fillRect(x+93, y+78, 15, 18);
-            ctx.fillStyle = "#fff";
-            ctx.fillRect(x+42, y+132, 42, 12);
-            ctx.fillStyle = "#000";
-            ctx.font = "9px monospace";
-            ctx.fillText("A123BC", x+45, y+143);
-            let red = (Math.sin(Date.now() * 0.015) > 0) ? "#f44" : "#faa";
-            let blue = (Math.sin(Date.now() * 0.015 + 2) > 0) ? "#44f" : "#aaf";
-            ctx.fillStyle = red;
-            ctx.fillRect(x+30, y+12, 18, 12);
-            ctx.fillStyle = blue;
-            ctx.fillRect(x+78, y+12, 18, 12);
-            ctx.fillStyle = "rgba(255,0,0,0.3)";
-            ctx.fillRect(x+27, y+6, 24, 6);
-            ctx.fillStyle = "rgba(0,0,255,0.3)";
-            ctx.fillRect(x+75, y+6, 24, 6);
-            ctx.fillStyle = "#222";
-            ctx.fillRect(x+18, y+135, 21, 12);
-            ctx.fillRect(x+87, y+135, 21, 12);
-        }
-        
-        function drawSpeedometer() {
-            const x = GAME_WIDTH - 200;
-            const y = 15;
-            const r = 33;
-            ctx.beginPath();
-            ctx.arc(x + r, y + r, r, 0, Math.PI * 2);
-            ctx.fillStyle = "#1a1a1a";
-            ctx.fill();
-            ctx.strokeStyle = "#dddddd";
-            ctx.lineWidth = 2;
-            ctx.stroke();
-            for (let i = 0; i <= 10; i++) {
-                let angle = -Math.PI/2 + (i / 10) * Math.PI;
-                let x1 = x + r + Math.cos(angle) * (r - 6);
-                let y1 = y + r + Math.sin(angle) * (r - 6);
-                let x2 = x + r + Math.cos(angle) * (r - 12);
-                let y2 = y + r + Math.sin(angle) * (r - 12);
-                ctx.beginPath();
-                ctx.moveTo(x1, y1);
-                ctx.lineTo(x2, y2);
-                ctx.strokeStyle = "#ccc";
-                ctx.stroke();
-            }
-            let angleSpeed = -Math.PI/2 + (currentSpeedKmh / 250) * Math.PI;
-            let arrowX = x + r + Math.cos(angleSpeed) * (r - 12);
-            let arrowY = y + r + Math.sin(angleSpeed) * (r - 12);
-            ctx.beginPath();
-            ctx.moveTo(x + r, y + r);
-            ctx.lineTo(arrowX, arrowY);
-            ctx.strokeStyle = "#ff4444";
-            ctx.lineWidth = 4;
-            ctx.stroke();
-            ctx.fillStyle = "#ffffaa";
-            ctx.beginPath();
-            ctx.arc(x + r, y + r, 5, 0, Math.PI*2);
-            ctx.fill();
-            ctx.font = "bold 42px monospace";
-            ctx.fillStyle = "#ffcc77";
-            ctx.fillText(`${Math.floor(currentSpeedKmh)}`, x + r + 45, y + r + 12);
-            ctx.font = "18px monospace";
-            ctx.fillStyle = "#aaa";
-            ctx.fillText("km/h", x + r + 113, y + r + 9);
-        }
-        
-        function drawObjects() {
-            for (let obj of roadObjects) {
-                if (obj.type === TYPE_STAFF) drawStaff(obj.x, obj.y, obj.w, obj.h, obj.angle);
-                else if (obj.type === TYPE_BUMP) drawBump(obj.x, obj.y, obj.w, obj.h);
-                else if (obj.type === TYPE_PIT) drawPit(obj.x, obj.y, obj.w, obj.h);
-                else if (obj.type === TYPE_VEST) drawVest(obj.x, obj.y, obj.w, obj.h);
-                else if (obj.type === TYPE_MULTI) drawMulti(obj.x, obj.y, obj.w, obj.h);
-            }
-        }
-        
-        function drawUItext() {
-            drawSpeedometer();
-            if (isPaused && gameRunning) {
-                ctx.font = "bold 42px monospace";
-                ctx.fillStyle = "#ffffaa";
-                ctx.fillText("ПАУЗА", GAME_WIDTH/2-80, GAME_HEIGHT/2);
-            }
-        }
-        
-        function gameLoop() {
-            if (!gameRunning) {
-                if (animationId) cancelAnimationFrame(animationId);
-                return;
-            }
-            if (!isPaused) {
-                updateTimers();
-                updateObjects();
-                trySpawn();
-            }
-            drawRoad();
-            drawObjects();
-            drawCar(LANE_POSITIONS[currentLane] - CAR_WIDTH/2, CAR_Y);
-            drawUItext();
-            animationId = requestAnimationFrame(gameLoop);
-        }
-        
-        function endGame() {
-            if (animationId) cancelAnimationFrame(animationId);
-            gameRunning = false;
-            const overlay = document.createElement('div');
-            overlay.className = 'rules-overlay';
-            overlay.innerHTML = `
-                <div class="rules-card">
-                    <h2>🚨 КОНЕЦ СМЕНЫ 🚨</h2>
-                    <p style="color:white; font-size:1.4rem;">Жезлов: <strong>${score}</strong></p>
-                    <p style="color:white;">Рекорд: ${maxScore}</p>
-                    <button id="restartBtnMobile">НОВЫЙ ВЫЕЗД</button>
+    }
+
+    function showRules(callback) {
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-card">
+                <h2>🚓 ДОБРО ПОЖАЛОВАТЬ</h2>
+                <ul style="text-align:left; font-size:0.9rem;">
+                    <li>🎯 Цель: собирайте чёрно-белые жезлы.</li>
+                    <li>✨ Бонус X2 — временное удвоение очков.</li>
+                    <li>⚠️ Не наезжайте на ямы и искусственные неровности.</li>
+                    <li>🛡️ Бронежилет — временная неуязвимость.</li>
+                    <li>📈 Скорость увеличивается в процессе игры.</li>
+                    <li>🎮 Управление: касания по левой/правой половине экрана.</li>
+                    <li>⏸️ Кнопка "Пауза" — остановить игру.</li>
+                </ul>
+                <button id="rulesOkBtn">ТАК ТОЧНО!</button>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        modal.querySelector('#rulesOkBtn').onclick = () => {
+            modal.remove();
+            if (callback) callback();
+        };
+    }
+
+    // Форма авторизации
+    function showLoginForm() {
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-card">
+                <h2>🚔 АВТОРИЗАЦИЯ</h2>
+                <input type="text" id="loginInput" placeholder="Логин">
+                <input type="password" id="passInput" placeholder="Пароль">
+                <div style="display:flex; justify-content:center; gap:10px;">
+                    <button id="loginBtn">Войти</button>
+                    <button id="registerBtn">Регистрация</button>
                 </div>
-            `;
-            document.body.appendChild(overlay);
-            document.getElementById('restartBtnMobile').onclick = () => {
-                overlay.remove();
-                resetGame();
-            };
+                <button id="guestBtn" class="guest-btn">Играть как гость</button>
+                <div id="authError" class="error-msg"></div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        const loginInput = modal.querySelector('#loginInput');
+        const passInput = modal.querySelector('#passInput');
+        const loginBtn = modal.querySelector('#loginBtn');
+        const registerBtn = modal.querySelector('#registerBtn');
+        const guestBtn = modal.querySelector('#guestBtn');
+        const errorDiv = modal.querySelector('#authError');
+        function clearError() { errorDiv.innerText = ''; }
+
+        loginBtn.onclick = () => {
+            clearError();
+            const login = loginInput.value.trim();
+            const pass = passInput.value;
+            if (!login || !pass) { errorDiv.innerText = "Заполните поля"; return; }
+            const err = loginUser(login, pass);
+            if (err) { errorDiv.innerText = err; return; }
+            currentUser = login;
+            guestMode = false;
+            modal.remove();
+            showRules(() => startGameAfterAuth());
+        };
+        registerBtn.onclick = () => {
+            modal.remove();
+            showRegisterForm();
+        };
+        guestBtn.onclick = () => {
+            currentUser = null;
+            guestMode = true;
+            modal.remove();
+            showRules(() => startGameAfterAuth());
+        };
+    }
+
+    // Форма регистрации
+    function showRegisterForm() {
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-card">
+                <h2>📝 РЕГИСТРАЦИЯ</h2>
+                <input type="text" id="regLogin" placeholder="Логин">
+                <input type="password" id="regPass" placeholder="Пароль">
+                <input type="password" id="regConfirm" placeholder="Повторите пароль">
+                <div style="display:flex; justify-content:center; gap:10px;">
+                    <button id="regSubmitBtn">Зарегистрироваться</button>
+                    <button id="backToLoginBtn" class="secondary">Назад</button>
+                </div>
+                <div id="regError" class="error-msg"></div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        const loginInput = modal.querySelector('#regLogin');
+        const passInput = modal.querySelector('#regPass');
+        const confirmInput = modal.querySelector('#regConfirm');
+        const submitBtn = modal.querySelector('#regSubmitBtn');
+        const backBtn = modal.querySelector('#backToLoginBtn');
+        const errorDiv = modal.querySelector('#regError');
+
+        submitBtn.onclick = () => {
+            errorDiv.innerText = '';
+            const login = loginInput.value.trim();
+            const pass = passInput.value;
+            const confirm = confirmInput.value;
+            const err = registerUser(login, pass, confirm);
+            if (err) { errorDiv.innerText = err; return; }
+            // после успешной регистрации сразу авторизуем
+            currentUser = login;
+            guestMode = false;
+            modal.remove();
+            showRules(() => startGameAfterAuth());
+        };
+        backBtn.onclick = () => {
+            modal.remove();
+            showLoginForm();
+        };
+    }
+
+    // Рейтинг
+    function showRatingModal() {
+        const top = getTopPlayers();
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        let html = `<div class="modal-card"><h2>🏆 ТОП-100 ИГРОКОВ</h2><div class="rating-list">`;
+        top.forEach((p, idx) => {
+            let rankClass = '';
+            if (idx === 0) rankClass = 'top1';
+            else if (idx === 1) rankClass = 'top2';
+            else if (idx === 2) rankClass = 'top3';
+            html += `<div class="rating-item ${rankClass}">${idx+1}. ${p.login} — ${p.record} жезлов</div>`;
+        });
+        if (top.length === 0) html += `<div>Нет зарегистрированных игроков</div>`;
+        html += `</div><button id="closeRating">ЗАКРЫТЬ</button></div>`;
+        modal.innerHTML = html;
+        document.body.appendChild(modal);
+        modal.querySelector('#closeRating').onclick = () => modal.remove();
+    }
+
+    // ---------- ИГРОВАЯ ЛОГИКА (исправлено управление) ----------
+    let gameRunning = false;
+    let isPaused = false;
+    let animationId = null;
+    let score = 0;
+    let currentSpeedKmh = 60;
+    let currentSpeed = 3.2;
+    let frameCounter = 0;
+    let spawnGap = 55;
+    let invincibleActive = false;
+    let invincibleFramesLeft = 0;
+    let multiplierActive = false;
+    let multiplierTimer = 0;
+    let roadObjects = [];
+    let currentLane = 1;  // 0,1,2
+    const GAME_WIDTH = 1000;
+    const GAME_HEIGHT = 700;
+    const LANE_WIDTH = 300;
+    const LEFT_OFFSET = 50;
+    const LANE_POSITIONS = [LEFT_OFFSET + LANE_WIDTH/2, LEFT_OFFSET + LANE_WIDTH/2 + LANE_WIDTH, LEFT_OFFSET + LANE_WIDTH/2 + 2*LANE_WIDTH];
+    const CAR_WIDTH = 126;
+    const CAR_HEIGHT = 144;
+    const CAR_Y = GAME_HEIGHT - CAR_HEIGHT - 25;
+    const TYPE_STAFF = 'staff', TYPE_PIT = 'pit', TYPE_BUMP = 'bump', TYPE_VEST = 'vest', TYPE_MULTI = 'multi';
+    const OBJECT_SIZES = { staff: { w: 72, h: 8 }, pit: { w: 195, h: 195 }, bump: { w: 255, h: 27 }, vest: { w: 96, h: 126 }, multi: { w: 60, h: 60 } };
+
+    let canvas, ctx, scoreSpan, recordSpan, multiplierBadge, invincibleSpan, pauseBtn, ratingBtn, exitBtn;
+
+    function kmhToSpeed(kmh) { return kmh * (3.2 / 60); }
+    function updateUI() {
+        if (!scoreSpan) return;
+        scoreSpan.innerText = score;
+        let personalBest = guestMode ? 0 : getUserRecord(currentUser);
+        recordSpan.innerText = guestMode ? "—" : personalBest;
+        multiplierBadge.innerText = multiplierActive ? 'x2' : 'x1';
+        multiplierBadge.style.background = multiplierActive ? '#ffaa44' : '#ffffffcc';
+        if (invincibleActive) {
+            let sec = Math.ceil(invincibleFramesLeft / 60);
+            invincibleSpan.innerHTML = `${sec} сек 🛡️`;
+        } else {
+            invincibleSpan.innerHTML = 'НЕТ';
         }
-        
-        function resetGame() {
-            if (animationId) cancelAnimationFrame(animationId);
-            gameRunning = true;
-            isPaused = false;
-            pauseBtn.innerText = "⏸️ ПАУЗА";
-            score = 0;
-            currentSpeedKmh = 60;
-            currentSpeed = kmhToSpeed(60);
-            frameCounter = 0;
-            multiplierActive = false;
-            invincibleActive = false;
-            invincibleFramesLeft = 0;
-            multiplierTimer = 0;
-            roadObjects = [];
-            currentLane = 1;
-            spawnGap = 55;
-            updateUI();
-            function loop() {
-                if (!gameRunning) return;
-                if (!isPaused) {
-                    updateTimers();
-                    updateObjects();
-                    trySpawn();
-                }
-                drawRoad();
-                drawObjects();
-                drawCar(LANE_POSITIONS[currentLane] - CAR_WIDTH/2, CAR_Y);
-                drawUItext();
-                animationId = requestAnimationFrame(loop);
+    }
+    function addScore(amount) {
+        if (!gameRunning || isPaused) return;
+        let final = multiplierActive ? amount * 2 : amount;
+        score += final;
+        if (!guestMode && currentUser) {
+            let best = getUserRecord(currentUser);
+            if (score > best) {
+                updateUserRecord(currentUser, score);
+                updateUI();
             }
+        }
+        updateUI();
+    }
+    function activateVest() { if (!gameRunning || isPaused) return; invincibleActive = true; invincibleFramesLeft = 300; updateUI(); }
+    function activateMultiplier() { if (!gameRunning || isPaused) return; multiplierActive = true; multiplierTimer = 380; updateUI(); }
+    function spawnObject() {
+        if (!gameRunning || isPaused) return;
+        let r = Math.random();
+        let type;
+        if (r < 0.55) type = TYPE_STAFF;
+        else if (r < 0.82) type = Math.random() < 0.6 ? TYPE_PIT : TYPE_BUMP;
+        else type = Math.random() < 0.6 ? TYPE_VEST : TYPE_MULTI;
+        let lane = Math.floor(Math.random() * 3);
+        let size = OBJECT_SIZES[type];
+        let x = LANE_POSITIONS[lane] - size.w/2;
+        roadObjects.push({ type, x, y: -size.h, w: size.w, h: size.h, angle: 0 });
+    }
+    function updateObjects() {
+        if (!gameRunning || isPaused) return;
+        const carX = LANE_POSITIONS[currentLane] - CAR_WIDTH/2;
+        const carRect = { x: carX, y: CAR_Y, w: CAR_WIDTH, h: CAR_HEIGHT };
+        for (let i=0; i<roadObjects.length; i++) {
+            let obj = roadObjects[i];
+            obj.y += currentSpeed;
+            if (obj.type === TYPE_STAFF) obj.angle = (obj.angle || 0) + 0.12;
+            let rect = { x: obj.x, y: obj.y, w: obj.w, h: obj.h };
+            if (rect.y + rect.h > CAR_Y && rect.y < CAR_Y + CAR_HEIGHT &&
+                rect.x < carRect.x + carRect.w && rect.x + rect.w > carRect.x) {
+                if (obj.type === TYPE_STAFF) { addScore(1); roadObjects.splice(i,1); i--; continue; }
+                else if (obj.type === TYPE_PIT || obj.type === TYPE_BUMP) {
+                    if (invincibleActive) { roadObjects.splice(i,1); i--; continue; }
+                    else { gameRunning = false; endGame(); return; }
+                }
+                else if (obj.type === TYPE_VEST) { activateVest(); roadObjects.splice(i,1); i--; continue; }
+                else if (obj.type === TYPE_MULTI) { activateMultiplier(); roadObjects.splice(i,1); i--; continue; }
+            }
+            if (obj.y > GAME_HEIGHT + 150) { roadObjects.splice(i,1); i--; }
+        }
+    }
+    function updateTimers() {
+        if (!gameRunning || isPaused) return;
+        if (multiplierActive) { multiplierTimer--; if (multiplierTimer <= 0) { multiplierActive = false; updateUI(); } }
+        if (invincibleActive) { invincibleFramesLeft--; if (invincibleFramesLeft <= 0) { invincibleActive = false; updateUI(); } else updateUI(); }
+    }
+    function updateSpeedByTime() {
+        if (!gameRunning || isPaused) return;
+        if (frameCounter % 300 === 0 && frameCounter !== 0) {
+            if (currentSpeedKmh < 250) {
+                currentSpeedKmh = Math.min(250, currentSpeedKmh + 10);
+                currentSpeed = kmhToSpeed(currentSpeedKmh);
+                spawnGap = Math.max(38, spawnGap - 0.5);
+            }
+        }
+    }
+    function trySpawn() {
+        if (!gameRunning || isPaused) return;
+        frameCounter++;
+        updateSpeedByTime();
+        let gap = Math.max(38, spawnGap - Math.floor(score / 100));
+        if (frameCounter % gap === 0) {
+            spawnObject();
+            if (Math.random() < 0.2 && currentSpeedKmh > 100) spawnObject();
+        }
+    }
+
+    // Отрисовка (без изменений)
+    function drawRoad() {
+        ctx.fillStyle = "#2a3a2e";
+        ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+        ctx.fillStyle = "#1f2c24";
+        ctx.fillRect(LEFT_OFFSET, 0, GAME_WIDTH - 2*LEFT_OFFSET, GAME_HEIGHT);
+        ctx.fillStyle = "#ad9e6b";
+        ctx.fillRect(LEFT_OFFSET-5, 0, 5, GAME_HEIGHT);
+        ctx.fillRect(GAME_WIDTH-LEFT_OFFSET, 0, 5, GAME_HEIGHT);
+        ctx.beginPath();
+        ctx.strokeStyle = "#f9f3cf";
+        ctx.lineWidth = 5;
+        ctx.setLineDash([25, 30]);
+        for (let i = 1; i < 3; i++) {
+            let lineX = LEFT_OFFSET + i * LANE_WIDTH;
+            ctx.beginPath();
+            ctx.moveTo(lineX, 0);
+            ctx.lineTo(lineX, GAME_HEIGHT);
+            ctx.stroke();
+        }
+        ctx.setLineDash([]);
+    }
+    function drawStaff(x, y, w, h, angle) {
+        ctx.save();
+        ctx.translate(x + w/2, y + h/2);
+        ctx.rotate(Math.sin(angle) * 0.5);
+        ctx.fillStyle = "#111";
+        ctx.fillRect(-w/2, -h/2, w, h);
+        let step = w / 12;
+        for (let i = 0; i < 12; i++) {
+            ctx.fillStyle = (i % 2 === 0) ? "#f4f4f4" : "#111";
+            ctx.fillRect(-w/2 + i*step, -h/2, step-0.5, h);
+        }
+        ctx.restore();
+    }
+    function drawBump(x, y, w, h) {
+        ctx.fillStyle = "#555";
+        ctx.fillRect(x, y+6, w, h);
+        ctx.fillStyle = "#FFCC00";
+        ctx.fillRect(x, y+6, 9, h);
+        ctx.fillRect(x+w-9, y+6, 9, h);
+        ctx.fillStyle = "#777";
+        for (let i=0; i<6; i++) ctx.fillRect(x+18 + i*38, y+12, 9, h-12);
+    }
+    function drawPit(x, y, w, h) {
+        let cx = x + w/2, cy = y + h/2;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, w/2, h/2.2, 0, 0, Math.PI*2);
+        ctx.fillStyle = "#2b2b2b";
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(cx, cy+3, w/2-12, h/2.8, 0, 0, Math.PI*2);
+        ctx.fillStyle = "#111";
+        ctx.fill();
+        ctx.fillStyle = "#5a4a3a";
+        ctx.fillRect(x+30, y+18, 12, 5);
+        ctx.fillRect(x+w-60, y+27, 18, 5);
+        ctx.fillRect(x+75, y+h-18, 30, 3);
+    }
+    function drawVest(x, y, w, h) {
+        ctx.fillStyle = "#1a2b4c";
+        ctx.fillRect(x, y, w, h);
+        ctx.fillStyle = "#c0c0c0";
+        ctx.fillRect(x+12, y+18, w-24, 12);
+        ctx.fillRect(x+12, y+h-24, w-24, 12);
+        ctx.fillStyle = "#FFCC00";
+        ctx.fillRect(x+30, y+42, 36, 24);
+        ctx.fillStyle = "#000";
+        ctx.font = "bold 20px monospace";
+        ctx.fillText("ДПС", x+38, y+63);
+        ctx.fillStyle = "#2a3d6e";
+        ctx.fillRect(x+12, y+78, 24, 24);
+        ctx.fillRect(x+w-36, y+78, 24, 24);
+        ctx.fillStyle = "#aaa";
+        ctx.fillRect(x+3, y+57, 9, 12);
+        ctx.fillRect(x+w-12, y+57, 9, 12);
+    }
+    function drawMulti(x, y, w, h) {
+        ctx.font = "bold 42px monospace";
+        ctx.fillStyle = "#FF0000";
+        ctx.fillText("X", x+6, y+45);
+        ctx.fillStyle = "#FFFF00";
+        ctx.fillText("2", x+33, y+48);
+    }
+    function drawCar(x, y) {
+        ctx.fillStyle = "#f5f5f5";
+        ctx.fillRect(x+12, y+30, 102, 108);
+        ctx.fillStyle = "#3a4f66";
+        ctx.fillRect(x+27, y+42, 27, 42);
+        ctx.fillRect(x+72, y+42, 27, 42);
+        ctx.fillStyle = "#1f4880";
+        ctx.fillRect(x+12, y+90, 102, 18);
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 15px monospace";
+        ctx.fillText("ДПС", x+48, y+105);
+        ctx.font = "12px monospace";
+        ctx.fillStyle = "#ffdd99";
+        ctx.fillText("ПОЛИЦИЯ", x+39, y+117);
+        ctx.fillStyle = "#d33";
+        ctx.fillRect(x+18, y+78, 15, 18);
+        ctx.fillRect(x+93, y+78, 15, 18);
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(x+42, y+132, 42, 12);
+        ctx.fillStyle = "#000";
+        ctx.font = "9px monospace";
+        ctx.fillText("A123BC", x+45, y+143);
+        let red = (Math.sin(Date.now() * 0.015) > 0) ? "#f44" : "#faa";
+        let blue = (Math.sin(Date.now() * 0.015 + 2) > 0) ? "#44f" : "#aaf";
+        ctx.fillStyle = red;
+        ctx.fillRect(x+30, y+12, 18, 12);
+        ctx.fillStyle = blue;
+        ctx.fillRect(x+78, y+12, 18, 12);
+        ctx.fillStyle = "rgba(255,0,0,0.3)";
+        ctx.fillRect(x+27, y+6, 24, 6);
+        ctx.fillStyle = "rgba(0,0,255,0.3)";
+        ctx.fillRect(x+75, y+6, 24, 6);
+        ctx.fillStyle = "#222";
+        ctx.fillRect(x+18, y+135, 21, 12);
+        ctx.fillRect(x+87, y+135, 21, 12);
+    }
+    function drawSpeedometer() {
+        const x = GAME_WIDTH - 200, y = 15, r = 33;
+        ctx.beginPath();
+        ctx.arc(x + r, y + r, r, 0, Math.PI * 2);
+        ctx.fillStyle = "#1a1a1a";
+        ctx.fill();
+        ctx.strokeStyle = "#dddddd";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        for (let i = 0; i <= 10; i++) {
+            let angle = -Math.PI/2 + (i / 10) * Math.PI;
+            let x1 = x + r + Math.cos(angle) * (r - 6);
+            let y1 = y + r + Math.sin(angle) * (r - 6);
+            let x2 = x + r + Math.cos(angle) * (r - 12);
+            let y2 = y + r + Math.sin(angle) * (r - 12);
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.strokeStyle = "#ccc";
+            ctx.stroke();
+        }
+        let angleSpeed = -Math.PI/2 + (currentSpeedKmh / 250) * Math.PI;
+        let arrowX = x + r + Math.cos(angleSpeed) * (r - 12);
+        let arrowY = y + r + Math.sin(angleSpeed) * (r - 12);
+        ctx.beginPath();
+        ctx.moveTo(x + r, y + r);
+        ctx.lineTo(arrowX, arrowY);
+        ctx.strokeStyle = "#ff4444";
+        ctx.lineWidth = 4;
+        ctx.stroke();
+        ctx.fillStyle = "#ffffaa";
+        ctx.beginPath();
+        ctx.arc(x + r, y + r, 5, 0, Math.PI*2);
+        ctx.fill();
+        ctx.font = "bold 42px monospace";
+        ctx.fillStyle = "#ffcc77";
+        ctx.fillText(`${Math.floor(currentSpeedKmh)}`, x + r + 45, y + r + 12);
+        ctx.font = "18px monospace";
+        ctx.fillStyle = "#aaa";
+        ctx.fillText("km/h", x + r + 113, y + r + 9);
+    }
+    function drawObjects() {
+        for (let obj of roadObjects) {
+            if (obj.type === TYPE_STAFF) drawStaff(obj.x, obj.y, obj.w, obj.h, obj.angle);
+            else if (obj.type === TYPE_BUMP) drawBump(obj.x, obj.y, obj.w, obj.h);
+            else if (obj.type === TYPE_PIT) drawPit(obj.x, obj.y, obj.w, obj.h);
+            else if (obj.type === TYPE_VEST) drawVest(obj.x, obj.y, obj.w, obj.h);
+            else if (obj.type === TYPE_MULTI) drawMulti(obj.x, obj.y, obj.w, obj.h);
+        }
+    }
+    function drawUI() {
+        drawSpeedometer();
+        if (isPaused && gameRunning) {
+            ctx.font = "bold 42px monospace";
+            ctx.fillStyle = "#ffffaa";
+            ctx.fillText("ПАУЗА", GAME_WIDTH/2-80, GAME_HEIGHT/2);
+        }
+    }
+    function gameLoop() {
+        if (!gameRunning) { if (animationId) cancelAnimationFrame(animationId); return; }
+        if (!isPaused) { updateTimers(); updateObjects(); trySpawn(); }
+        drawRoad(); drawObjects(); drawCar(LANE_POSITIONS[currentLane] - CAR_WIDTH/2, CAR_Y); drawUI();
+        animationId = requestAnimationFrame(gameLoop);
+    }
+    function endGame() {
+        if (animationId) cancelAnimationFrame(animationId);
+        gameRunning = false;
+        showMessage("🚨 КОНЕЦ СМЕНЫ", `Вы собрали ${score} жезлов. Рекорд: ${guestMode ? "не сохраняется" : getUserRecord(currentUser)}`, () => resetGame());
+    }
+    function resetGame() {
+        if (animationId) cancelAnimationFrame(animationId);
+        gameRunning = true;
+        isPaused = false;
+        pauseBtn.innerText = "⏸️ ПАУЗА";
+        score = 0;
+        currentSpeedKmh = 60;
+        currentSpeed = kmhToSpeed(60);
+        frameCounter = 0;
+        multiplierActive = false;
+        invincibleActive = false;
+        invincibleFramesLeft = 0;
+        multiplierTimer = 0;
+        roadObjects = [];
+        currentLane = 1;
+        spawnGap = 55;
+        updateUI();
+        function loop() {
+            if (!gameRunning) return;
+            if (!isPaused) { updateTimers(); updateObjects(); trySpawn(); }
+            drawRoad(); drawObjects(); drawCar(LANE_POSITIONS[currentLane] - CAR_WIDTH/2, CAR_Y); drawUI();
             animationId = requestAnimationFrame(loop);
         }
-        
+        animationId = requestAnimationFrame(loop);
+    }
+
+    function exitToAuth() {
+        if (animationId) cancelAnimationFrame(animationId);
+        gameRunning = false;
+        document.getElementById('gameContainer').style.display = 'none';
+        currentUser = null;
+        guestMode = false;
+        showLoginForm();
+    }
+
+    function startGameAfterAuth() {
+        const container = document.getElementById('gameContainer');
+        container.style.display = 'block';
+        canvas = document.getElementById('gameCanvas');
+        ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+        canvas.width = GAME_WIDTH; canvas.height = GAME_HEIGHT;
+        scoreSpan = document.getElementById('scoreValue');
+        recordSpan = document.getElementById('recordValue');
+        multiplierBadge = document.getElementById('multiplierBadge');
+        invincibleSpan = document.getElementById('invincibleBadge');
+        pauseBtn = document.getElementById('pauseBtn');
+        ratingBtn = document.getElementById('ratingBtn');
+        exitBtn = document.getElementById('exitBtn');
+        ratingBtn.onclick = () => showRatingModal();
+        exitBtn.onclick = () => exitToAuth();
+
+        let initialRecord = guestMode ? 0 : getUserRecord(currentUser);
+        recordSpan.innerText = guestMode ? "—" : initialRecord;
+
+        // Управление (работает)
         function left() { if (gameRunning && !isPaused) currentLane = Math.max(0, currentLane-1); }
         function right() { if (gameRunning && !isPaused) currentLane = Math.min(2, currentLane+1); }
-        
-        canvas.addEventListener('touchstart', (e) => {
+        // Отключаем старые обработчики, чтобы не дублировались
+        canvas.removeEventListener('touchstart', canvas._touchHandler);
+        canvas.removeEventListener('mousedown', canvas._mouseHandler);
+        canvas._touchHandler = (e) => {
             e.preventDefault();
             if (!gameRunning || isPaused) return;
             const rect = canvas.getBoundingClientRect();
             const scaleX = GAME_WIDTH / rect.width;
             const touchX = (e.touches[0].clientX - rect.left) * scaleX;
-            if (touchX < GAME_WIDTH/2) left();
-            else right();
-        });
-        canvas.addEventListener('mousedown', (e) => {
+            touchX < GAME_WIDTH/2 ? left() : right();
+        };
+        canvas._mouseHandler = (e) => {
             if (!gameRunning || isPaused) return;
             const rect = canvas.getBoundingClientRect();
             const scaleX = GAME_WIDTH / rect.width;
             const mouseX = (e.clientX - rect.left) * scaleX;
-            if (mouseX < GAME_WIDTH/2) left();
-            else right();
-        });
-        
-        pauseBtn.addEventListener('click', () => {
+            mouseX < GAME_WIDTH/2 ? left() : right();
+        };
+        canvas.addEventListener('touchstart', canvas._touchHandler);
+        canvas.addEventListener('mousedown', canvas._mouseHandler);
+
+        pauseBtn.onclick = () => {
             if (!gameRunning) return;
             isPaused = !isPaused;
             pauseBtn.innerText = isPaused ? "▶️ ПРОДОЛЖИТЬ" : "⏸️ ПАУЗА";
             updateUI();
-        });
-        
-        function showRulesAndStart() {
-            const rulesDiv = document.createElement('div');
-            rulesDiv.className = 'rules-overlay';
-            rulesDiv.innerHTML = `
-                <div class="rules-card">
-                    <h2>🚓 ДОБРО ПОЖАЛОВАТЬ</h2>
-                    <ul>
-                        <li>🎯 Цель: собирайте чёрно-белые жезлы.</li>
-                        <li>✨ Бонус X2 — временное удвоение очков.</li>
-                        <li>⚠️ Не наезжайте на ямы и искусственные неровности.</li>
-                        <li>🛡️ Бронежилет — временная неуязвимость.</li>
-                        <li>📈 Скорость увеличивается каждые 5 секунд до 250 км/ч.</li>
-                        <li>🎮 Управление: касания по левой/правой половине экрана.</li>
-                        <li>⏸️ Кнопка "Пауза" — остановить игру.</li>
-                    </ul>
-                    <button id="startGameBtnMobile">ТАК ТОЧНО!</button>
-                </div>
-            `;
-            document.body.appendChild(rulesDiv);
-            document.getElementById('startGameBtnMobile').onclick = () => {
-                rulesDiv.remove();
-                resetGame();
-            };
-        }
-        
-        showRulesAndStart();
-    })();
+        };
+        resetGame();
+    }
+
+    // Запуск
+    showLoginForm();
 </script>
 </body>
 </html>
