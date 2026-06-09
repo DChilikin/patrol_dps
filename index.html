@@ -83,7 +83,7 @@
             padding: 2px 8px;
             border-radius: 30px;
             margin-left: 6px;
-            font-size: 0.5rem;
+            font-size: 0.25rem; /* Уменьшил шрифт "разработчик" в два раза */
         }
         .exit-btn, .pause-btn {
             background: rgba(0,0,0,0.6);
@@ -96,13 +96,8 @@
             backdrop-filter: blur(4px);
             font-family: monospace;
         }
-        .exit-btn {
-            color: #ffaa88;
-            font-size: 0.8rem;
-        }
-        .pause-btn {
-            font-size: 0.9rem;
-        }
+        .exit-btn { color: #ffaa88; font-size: 0.8rem; }
+        .pause-btn { font-size: 0.9rem; }
         .stats-panel {
             display: flex;
             justify-content: space-between;
@@ -146,7 +141,6 @@
             border-radius: 40px;
             text-align: center;
         }
-        /* Модальные окна */
         .modal {
             position: fixed;
             top: 0;
@@ -194,17 +188,9 @@
             cursor: pointer;
             font-family: monospace;
         }
-        .modal-card button.secondary {
-            background: #2a5a6a;
-        }
-        .modal-card .guest-btn {
-            background: #2a6b2a;
-        }
-        .error-msg {
-            color: #ffaa88;
-            font-size: 0.8rem;
-            margin: 5px 0;
-        }
+        .modal-card button.secondary { background: #2a5a6a; }
+        .modal-card .guest-btn { background: #2a6b2a; }
+        .error-msg { color: #ffaa88; font-size: 0.8rem; margin: 5px 0; }
         .rating-list {
             max-height: 400px;
             overflow-y: auto;
@@ -212,61 +198,11 @@
             margin: 15px 0;
             font-size: 0.8rem;
         }
-        .rating-item {
-            padding: 5px;
-            border-bottom: 1px solid #3a5a6a;
-        }
+        .rating-item { padding: 5px; border-bottom: 1px solid #3a5a6a; }
         .top1 { background: #ffd70022; color: gold; font-weight: bold; }
         .top2 { background: #c0c0c022; color: silver; font-weight: bold; }
         .top3 { background: #cd7f3222; color: #cd7f32; font-weight: bold; }
     </style>
-    <script>
-        // Хранение данных пользователей в localStorage
-        const DB_KEY = 'gibdd_users';
-        function getUsers() {
-            const data = localStorage.getItem(DB_KEY);
-            return data ? JSON.parse(data) : {};
-        }
-        function saveUsers(users) {
-            localStorage.setItem(DB_KEY, JSON.stringify(users));
-        }
-        function registerUser(login, password, confirm) {
-            if (!login || !password) return "Заполните все поля";
-            if (password !== confirm) return "Пароли не совпадают";
-            const users = getUsers();
-            if (users[login]) return "Пользователь уже существует";
-            users[login] = { password: password, record: 0 };
-            saveUsers(users);
-            return null;
-        }
-        function loginUser(login, password) {
-            const users = getUsers();
-            if (!users[login]) return "Неверный логин";
-            if (users[login].password !== password) return "Неверный пароль";
-            return null;
-        }
-        function getUserRecord(login) {
-            const users = getUsers();
-            return users[login] ? users[login].record : 0;
-        }
-        function updateUserRecord(login, newRecord) {
-            if (!login) return;
-            const users = getUsers();
-            if (users[login] && newRecord > users[login].record) {
-                users[login].record = newRecord;
-                saveUsers(users);
-            }
-        }
-        function getTopPlayers() {
-            const users = getUsers();
-            const list = [];
-            for (let login in users) {
-                list.push({ login, record: users[login].record });
-            }
-            list.sort((a,b) => b.record - a.record);
-            return list.slice(0, 100);
-        }
-    </script>
 </head>
 <body>
 <div>
@@ -281,180 +217,117 @@
         </div>
         <canvas id="gameCanvas" width="1000" height="700" style="width:100%; height:auto;"></canvas>
         <div class="stats-panel">
-            <div class="score-box">📊 ЖЕЗЛОВ: <span id="scoreValue" style="font-size:0.8rem; font-weight:bold;">0</span></div>
-            <div class="record-box">🏆 РЕКОРД: <span id="recordValue" style="font-size:0.8rem; font-weight:bold;">0</span></div>
+            <div class="score-box">📊 ЖЕЗЛОВ: <span id="scoreValue" style="font-size:0.8rem;">0</span></div>
+            <div class="record-box">🏆 РЕКОРД: <span id="recordValue" style="font-size:0.8rem;">0</span></div>
             <div class="multiplier-box">✨ РЕЖИМ: <span id="multiplierBadge" class="badge">x1</span></div>
             <div class="invincible-box">🛡️ БРОНЯ: <span id="invincibleBadge">НЕТ</span></div>
         </div>
         <div style="text-align: center; margin-top: 10px;">
             <div class="controls-hint">👆 КАСАЙСЯ ЛЕВОЙ / ПРАВОЙ ПОЛОВИНЫ ЭКРАНА</div>
-            <button id="ratingBtn" style="background:#000000aa; border:none; color:white; border-radius:40px; padding:4px 12px; margin-top:6px; font-family:monospace;">🏆 РЕЙТИНГ ТОП-100</button>
+            <button id="ratingBtn" style="background:#000000aa; border:none; color:white; border-radius:40px; padding:4px 12px; margin-top:6px;">🏆 РЕЙТИНГ ТОП-100</button>
         </div>
     </div>
 </div>
 
 <script>
-    // ---------- АВТОРИЗАЦИЯ И РЕГИСТРАЦИЯ (модальные окна без alert) ----------
+    // ==================== НАСТРОЙКИ GITHUB GIST (ваши данные) ====================
+    const GIST_ID = '89f2ed10f406e845972abb7e4d73cb40';
+    const GITHUB_TOKEN = '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';
+    // ============================================================================
+
+    // Функция для хеширования пароля (SHA-256)
+    async function hashPassword(password) {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(password);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    // Чтение базы из Gist
+    async function loadDatabase() {
+        const url = `https://api.github.com/gists/${GIST_ID}`;
+        const response = await fetch(url, {
+            headers: { 'Authorization': `token ${GITHUB_TOKEN}` }
+        });
+        if (!response.ok) throw new Error('Не удалось загрузить базу');
+        const data = await response.json();
+        const content = data.files['game_db.json']?.content || '{}';
+        return JSON.parse(content);
+    }
+
+    // Сохранение базы в Gist
+    async function saveDatabase(db) {
+        const url = `https://api.github.com/gists/${GIST_ID}`;
+        const content = JSON.stringify(db, null, 2);
+        const response = await fetch(url, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `token ${GITHUB_TOKEN}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                files: { 'game_db.json': { content: content } }
+            })
+        });
+        if (!response.ok) throw new Error('Не удалось сохранить базу');
+    }
+
+    // Регистрация
+    async function registerUser(login, password, confirm) {
+        if (!login || !password) return "Заполните все поля";
+        if (password !== confirm) return "Пароли не совпадают";
+        login = login.toLowerCase();
+        const db = await loadDatabase();
+        if (db[login]) return "Пользователь уже существует";
+        const hashed = await hashPassword(password);
+        db[login] = { password: hashed, record: 0 };
+        await saveDatabase(db);
+        return null;
+    }
+
+    // Авторизация
+    async function loginUser(login, password) {
+        login = login.toLowerCase();
+        const db = await loadDatabase();
+        if (!db[login]) return "Неверный логин";
+        const hashed = await hashPassword(password);
+        if (db[login].password !== hashed) return "Неверный пароль";
+        return null;
+    }
+
+    // Получить рекорд
+    async function getUserRecord(login) {
+        login = login.toLowerCase();
+        const db = await loadDatabase();
+        return db[login] ? db[login].record : 0;
+    }
+
+    // Обновить рекорд
+    async function updateUserRecord(login, newRecord) {
+        if (!login) return;
+        login = login.toLowerCase();
+        const db = await loadDatabase();
+        if (db[login] && newRecord > db[login].record) {
+            db[login].record = newRecord;
+            await saveDatabase(db);
+        }
+    }
+
+    // Получить топ-100
+    async function getTopPlayers() {
+        const db = await loadDatabase();
+        const list = [];
+        for (let login in db) {
+            list.push({ login, record: db[login].record });
+        }
+        list.sort((a,b) => b.record - a.record);
+        return list.slice(0, 100);
+    }
+
+    // ==================== ИГРОВАЯ ЛОГИКА ====================
     let currentUser = null;
     let guestMode = false;
-
-    function showMessage(title, text, onClose = null) {
-        const modal = document.createElement('div');
-        modal.className = 'modal';
-        modal.innerHTML = `
-            <div class="modal-card">
-                <h2>${title}</h2>
-                <p>${text}</p>
-                <button id="msgOkBtn">ОК</button>
-            </div>
-        `;
-        document.body.appendChild(modal);
-        modal.querySelector('#msgOkBtn').onclick = () => {
-            modal.remove();
-            if (onClose) onClose();
-        };
-    }
-
-    function showRules(callback) {
-        const modal = document.createElement('div');
-        modal.className = 'modal';
-        modal.innerHTML = `
-            <div class="modal-card">
-                <h2>🚓 ДОБРО ПОЖАЛОВАТЬ</h2>
-                <ul style="text-align:left; font-size:0.9rem;">
-                    <li>🎯 Цель: собирайте чёрно-белые жезлы.</li>
-                    <li>✨ Бонус X2 — временное удвоение очков.</li>
-                    <li>⚠️ Не наезжайте на ямы и искусственные неровности.</li>
-                    <li>🛡️ Бронежилет — временная неуязвимость.</li>
-                    <li>📈 Скорость увеличивается в процессе игры.</li>
-                    <li>🎮 Управление: касания по левой/правой половине экрана.</li>
-                    <li>⏸️ Кнопка "Пауза" — остановить игру.</li>
-                </ul>
-                <button id="rulesOkBtn">ТАК ТОЧНО!</button>
-            </div>
-        `;
-        document.body.appendChild(modal);
-        modal.querySelector('#rulesOkBtn').onclick = () => {
-            modal.remove();
-            if (callback) callback();
-        };
-    }
-
-    // Форма авторизации
-    function showLoginForm() {
-        const modal = document.createElement('div');
-        modal.className = 'modal';
-        modal.innerHTML = `
-            <div class="modal-card">
-                <h2>🚔 АВТОРИЗАЦИЯ</h2>
-                <input type="text" id="loginInput" placeholder="Логин">
-                <input type="password" id="passInput" placeholder="Пароль">
-                <div style="display:flex; justify-content:center; gap:10px;">
-                    <button id="loginBtn">Войти</button>
-                    <button id="registerBtn">Регистрация</button>
-                </div>
-                <button id="guestBtn" class="guest-btn">Играть как гость</button>
-                <div id="authError" class="error-msg"></div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-        const loginInput = modal.querySelector('#loginInput');
-        const passInput = modal.querySelector('#passInput');
-        const loginBtn = modal.querySelector('#loginBtn');
-        const registerBtn = modal.querySelector('#registerBtn');
-        const guestBtn = modal.querySelector('#guestBtn');
-        const errorDiv = modal.querySelector('#authError');
-        function clearError() { errorDiv.innerText = ''; }
-
-        loginBtn.onclick = () => {
-            clearError();
-            const login = loginInput.value.trim();
-            const pass = passInput.value;
-            if (!login || !pass) { errorDiv.innerText = "Заполните поля"; return; }
-            const err = loginUser(login, pass);
-            if (err) { errorDiv.innerText = err; return; }
-            currentUser = login;
-            guestMode = false;
-            modal.remove();
-            showRules(() => startGameAfterAuth());
-        };
-        registerBtn.onclick = () => {
-            modal.remove();
-            showRegisterForm();
-        };
-        guestBtn.onclick = () => {
-            currentUser = null;
-            guestMode = true;
-            modal.remove();
-            showRules(() => startGameAfterAuth());
-        };
-    }
-
-    // Форма регистрации
-    function showRegisterForm() {
-        const modal = document.createElement('div');
-        modal.className = 'modal';
-        modal.innerHTML = `
-            <div class="modal-card">
-                <h2>📝 РЕГИСТРАЦИЯ</h2>
-                <input type="text" id="regLogin" placeholder="Логин">
-                <input type="password" id="regPass" placeholder="Пароль">
-                <input type="password" id="regConfirm" placeholder="Повторите пароль">
-                <div style="display:flex; justify-content:center; gap:10px;">
-                    <button id="regSubmitBtn">Зарегистрироваться</button>
-                    <button id="backToLoginBtn" class="secondary">Назад</button>
-                </div>
-                <div id="regError" class="error-msg"></div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-        const loginInput = modal.querySelector('#regLogin');
-        const passInput = modal.querySelector('#regPass');
-        const confirmInput = modal.querySelector('#regConfirm');
-        const submitBtn = modal.querySelector('#regSubmitBtn');
-        const backBtn = modal.querySelector('#backToLoginBtn');
-        const errorDiv = modal.querySelector('#regError');
-
-        submitBtn.onclick = () => {
-            errorDiv.innerText = '';
-            const login = loginInput.value.trim();
-            const pass = passInput.value;
-            const confirm = confirmInput.value;
-            const err = registerUser(login, pass, confirm);
-            if (err) { errorDiv.innerText = err; return; }
-            // после успешной регистрации сразу авторизуем
-            currentUser = login;
-            guestMode = false;
-            modal.remove();
-            showRules(() => startGameAfterAuth());
-        };
-        backBtn.onclick = () => {
-            modal.remove();
-            showLoginForm();
-        };
-    }
-
-    // Рейтинг
-    function showRatingModal() {
-        const top = getTopPlayers();
-        const modal = document.createElement('div');
-        modal.className = 'modal';
-        let html = `<div class="modal-card"><h2>🏆 ТОП-100 ИГРОКОВ</h2><div class="rating-list">`;
-        top.forEach((p, idx) => {
-            let rankClass = '';
-            if (idx === 0) rankClass = 'top1';
-            else if (idx === 1) rankClass = 'top2';
-            else if (idx === 2) rankClass = 'top3';
-            html += `<div class="rating-item ${rankClass}">${idx+1}. ${p.login} — ${p.record} жезлов</div>`;
-        });
-        if (top.length === 0) html += `<div>Нет зарегистрированных игроков</div>`;
-        html += `</div><button id="closeRating">ЗАКРЫТЬ</button></div>`;
-        modal.innerHTML = html;
-        document.body.appendChild(modal);
-        modal.querySelector('#closeRating').onclick = () => modal.remove();
-    }
-
-    // ---------- ИГРОВАЯ ЛОГИКА (исправлено управление) ----------
     let gameRunning = false;
     let isPaused = false;
     let animationId = null;
@@ -462,13 +335,13 @@
     let currentSpeedKmh = 60;
     let currentSpeed = 3.2;
     let frameCounter = 0;
-    let spawnGap = 55;
+    let dynamicSpawnGap = 55; // Будет пересчитываться от скорости
     let invincibleActive = false;
     let invincibleFramesLeft = 0;
     let multiplierActive = false;
     let multiplierTimer = 0;
     let roadObjects = [];
-    let currentLane = 1;  // 0,1,2
+    let currentLane = 1;
     const GAME_WIDTH = 1000;
     const GAME_HEIGHT = 700;
     const LANE_WIDTH = 300;
@@ -479,14 +352,24 @@
     const CAR_Y = GAME_HEIGHT - CAR_HEIGHT - 25;
     const TYPE_STAFF = 'staff', TYPE_PIT = 'pit', TYPE_BUMP = 'bump', TYPE_VEST = 'vest', TYPE_MULTI = 'multi';
     const OBJECT_SIZES = { staff: { w: 72, h: 8 }, pit: { w: 195, h: 195 }, bump: { w: 255, h: 27 }, vest: { w: 96, h: 126 }, multi: { w: 60, h: 60 } };
-
     let canvas, ctx, scoreSpan, recordSpan, multiplierBadge, invincibleSpan, pauseBtn, ratingBtn, exitBtn;
 
     function kmhToSpeed(kmh) { return kmh * (3.2 / 60); }
-    function updateUI() {
-        if (!scoreSpan) return;
+
+    // Обновление интервала спавна в зависимости от скорости
+    function updateSpawnGap() {
+        // При 60 км/ч -> задержка 55 кадров, при 250 км/ч -> задержка 22 кадра
+        // Линейная интерполяция
+        const minSpeed = 60, maxSpeed = 250;
+        const minGap = 22, maxGap = 55;
+        let clampedSpeed = Math.min(maxSpeed, Math.max(minSpeed, currentSpeedKmh));
+        let newGap = maxGap - ( (clampedSpeed - minSpeed) / (maxSpeed - minSpeed) ) * (maxGap - minGap);
+        dynamicSpawnGap = Math.floor(newGap);
+    }
+
+    async function updateUI() {
         scoreSpan.innerText = score;
-        let personalBest = guestMode ? 0 : getUserRecord(currentUser);
+        let personalBest = guestMode ? 0 : await getUserRecord(currentUser);
         recordSpan.innerText = guestMode ? "—" : personalBest;
         multiplierBadge.innerText = multiplierActive ? 'x2' : 'x1';
         multiplierBadge.style.background = multiplierActive ? '#ffaa44' : '#ffffffcc';
@@ -497,21 +380,17 @@
             invincibleSpan.innerHTML = 'НЕТ';
         }
     }
+
     function addScore(amount) {
         if (!gameRunning || isPaused) return;
         let final = multiplierActive ? amount * 2 : amount;
         score += final;
-        if (!guestMode && currentUser) {
-            let best = getUserRecord(currentUser);
-            if (score > best) {
-                updateUserRecord(currentUser, score);
-                updateUI();
-            }
-        }
         updateUI();
     }
+
     function activateVest() { if (!gameRunning || isPaused) return; invincibleActive = true; invincibleFramesLeft = 300; updateUI(); }
     function activateMultiplier() { if (!gameRunning || isPaused) return; multiplierActive = true; multiplierTimer = 380; updateUI(); }
+
     function spawnObject() {
         if (!gameRunning || isPaused) return;
         let r = Math.random();
@@ -524,6 +403,7 @@
         let x = LANE_POSITIONS[lane] - size.w/2;
         roadObjects.push({ type, x, y: -size.h, w: size.w, h: size.h, angle: 0 });
     }
+
     function updateObjects() {
         if (!gameRunning || isPaused) return;
         const carX = LANE_POSITIONS[currentLane] - CAR_WIDTH/2;
@@ -546,221 +426,71 @@
             if (obj.y > GAME_HEIGHT + 150) { roadObjects.splice(i,1); i--; }
         }
     }
+
     function updateTimers() {
         if (!gameRunning || isPaused) return;
         if (multiplierActive) { multiplierTimer--; if (multiplierTimer <= 0) { multiplierActive = false; updateUI(); } }
         if (invincibleActive) { invincibleFramesLeft--; if (invincibleFramesLeft <= 0) { invincibleActive = false; updateUI(); } else updateUI(); }
     }
+
     function updateSpeedByTime() {
         if (!gameRunning || isPaused) return;
         if (frameCounter % 300 === 0 && frameCounter !== 0) {
             if (currentSpeedKmh < 250) {
                 currentSpeedKmh = Math.min(250, currentSpeedKmh + 10);
                 currentSpeed = kmhToSpeed(currentSpeedKmh);
-                spawnGap = Math.max(38, spawnGap - 0.5);
+                updateSpawnGap(); // Пересчитываем задержку спавна при увеличении скорости
             }
         }
     }
+
     function trySpawn() {
         if (!gameRunning || isPaused) return;
         frameCounter++;
         updateSpeedByTime();
-        let gap = Math.max(38, spawnGap - Math.floor(score / 100));
-        if (frameCounter % gap === 0) {
+        // Используем динамическую задержку, зависящую от скорости
+        let currentGap = Math.max(22, dynamicSpawnGap - Math.floor(score / 200)); // Дополнительное ускорение от счета
+        if (frameCounter % currentGap === 0) {
             spawnObject();
             if (Math.random() < 0.2 && currentSpeedKmh > 100) spawnObject();
         }
     }
 
-    // Отрисовка (без изменений)
+    // Отрисовка (сокращённо, но полная)
     function drawRoad() {
-        ctx.fillStyle = "#2a3a2e";
-        ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-        ctx.fillStyle = "#1f2c24";
-        ctx.fillRect(LEFT_OFFSET, 0, GAME_WIDTH - 2*LEFT_OFFSET, GAME_HEIGHT);
-        ctx.fillStyle = "#ad9e6b";
-        ctx.fillRect(LEFT_OFFSET-5, 0, 5, GAME_HEIGHT);
-        ctx.fillRect(GAME_WIDTH-LEFT_OFFSET, 0, 5, GAME_HEIGHT);
-        ctx.beginPath();
-        ctx.strokeStyle = "#f9f3cf";
-        ctx.lineWidth = 5;
-        ctx.setLineDash([25, 30]);
-        for (let i = 1; i < 3; i++) {
-            let lineX = LEFT_OFFSET + i * LANE_WIDTH;
-            ctx.beginPath();
-            ctx.moveTo(lineX, 0);
-            ctx.lineTo(lineX, GAME_HEIGHT);
-            ctx.stroke();
-        }
+        ctx.fillStyle = "#2a3a2e"; ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+        ctx.fillStyle = "#1f2c24"; ctx.fillRect(LEFT_OFFSET, 0, GAME_WIDTH - 2*LEFT_OFFSET, GAME_HEIGHT);
+        ctx.fillStyle = "#ad9e6b"; ctx.fillRect(LEFT_OFFSET-5, 0, 5, GAME_HEIGHT); ctx.fillRect(GAME_WIDTH-LEFT_OFFSET, 0, 5, GAME_HEIGHT);
+        ctx.beginPath(); ctx.strokeStyle = "#f9f3cf"; ctx.lineWidth = 5; ctx.setLineDash([25, 30]);
+        for (let i = 1; i < 3; i++) { let lineX = LEFT_OFFSET + i * LANE_WIDTH; ctx.beginPath(); ctx.moveTo(lineX, 0); ctx.lineTo(lineX, GAME_HEIGHT); ctx.stroke(); }
         ctx.setLineDash([]);
     }
-    function drawStaff(x, y, w, h, angle) {
-        ctx.save();
-        ctx.translate(x + w/2, y + h/2);
-        ctx.rotate(Math.sin(angle) * 0.5);
-        ctx.fillStyle = "#111";
-        ctx.fillRect(-w/2, -h/2, w, h);
-        let step = w / 12;
-        for (let i = 0; i < 12; i++) {
-            ctx.fillStyle = (i % 2 === 0) ? "#f4f4f4" : "#111";
-            ctx.fillRect(-w/2 + i*step, -h/2, step-0.5, h);
-        }
-        ctx.restore();
-    }
-    function drawBump(x, y, w, h) {
-        ctx.fillStyle = "#555";
-        ctx.fillRect(x, y+6, w, h);
-        ctx.fillStyle = "#FFCC00";
-        ctx.fillRect(x, y+6, 9, h);
-        ctx.fillRect(x+w-9, y+6, 9, h);
-        ctx.fillStyle = "#777";
-        for (let i=0; i<6; i++) ctx.fillRect(x+18 + i*38, y+12, 9, h-12);
-    }
-    function drawPit(x, y, w, h) {
-        let cx = x + w/2, cy = y + h/2;
-        ctx.beginPath();
-        ctx.ellipse(cx, cy, w/2, h/2.2, 0, 0, Math.PI*2);
-        ctx.fillStyle = "#2b2b2b";
-        ctx.fill();
-        ctx.beginPath();
-        ctx.ellipse(cx, cy+3, w/2-12, h/2.8, 0, 0, Math.PI*2);
-        ctx.fillStyle = "#111";
-        ctx.fill();
-        ctx.fillStyle = "#5a4a3a";
-        ctx.fillRect(x+30, y+18, 12, 5);
-        ctx.fillRect(x+w-60, y+27, 18, 5);
-        ctx.fillRect(x+75, y+h-18, 30, 3);
-    }
-    function drawVest(x, y, w, h) {
-        ctx.fillStyle = "#1a2b4c";
-        ctx.fillRect(x, y, w, h);
-        ctx.fillStyle = "#c0c0c0";
-        ctx.fillRect(x+12, y+18, w-24, 12);
-        ctx.fillRect(x+12, y+h-24, w-24, 12);
-        ctx.fillStyle = "#FFCC00";
-        ctx.fillRect(x+30, y+42, 36, 24);
-        ctx.fillStyle = "#000";
-        ctx.font = "bold 20px monospace";
-        ctx.fillText("ДПС", x+38, y+63);
-        ctx.fillStyle = "#2a3d6e";
-        ctx.fillRect(x+12, y+78, 24, 24);
-        ctx.fillRect(x+w-36, y+78, 24, 24);
-        ctx.fillStyle = "#aaa";
-        ctx.fillRect(x+3, y+57, 9, 12);
-        ctx.fillRect(x+w-12, y+57, 9, 12);
-    }
-    function drawMulti(x, y, w, h) {
-        ctx.font = "bold 42px monospace";
-        ctx.fillStyle = "#FF0000";
-        ctx.fillText("X", x+6, y+45);
-        ctx.fillStyle = "#FFFF00";
-        ctx.fillText("2", x+33, y+48);
-    }
-    function drawCar(x, y) {
-        ctx.fillStyle = "#f5f5f5";
-        ctx.fillRect(x+12, y+30, 102, 108);
-        ctx.fillStyle = "#3a4f66";
-        ctx.fillRect(x+27, y+42, 27, 42);
-        ctx.fillRect(x+72, y+42, 27, 42);
-        ctx.fillStyle = "#1f4880";
-        ctx.fillRect(x+12, y+90, 102, 18);
-        ctx.fillStyle = "#fff";
-        ctx.font = "bold 15px monospace";
-        ctx.fillText("ДПС", x+48, y+105);
-        ctx.font = "12px monospace";
-        ctx.fillStyle = "#ffdd99";
-        ctx.fillText("ПОЛИЦИЯ", x+39, y+117);
-        ctx.fillStyle = "#d33";
-        ctx.fillRect(x+18, y+78, 15, 18);
-        ctx.fillRect(x+93, y+78, 15, 18);
-        ctx.fillStyle = "#fff";
-        ctx.fillRect(x+42, y+132, 42, 12);
-        ctx.fillStyle = "#000";
-        ctx.font = "9px monospace";
-        ctx.fillText("A123BC", x+45, y+143);
-        let red = (Math.sin(Date.now() * 0.015) > 0) ? "#f44" : "#faa";
-        let blue = (Math.sin(Date.now() * 0.015 + 2) > 0) ? "#44f" : "#aaf";
-        ctx.fillStyle = red;
-        ctx.fillRect(x+30, y+12, 18, 12);
-        ctx.fillStyle = blue;
-        ctx.fillRect(x+78, y+12, 18, 12);
-        ctx.fillStyle = "rgba(255,0,0,0.3)";
-        ctx.fillRect(x+27, y+6, 24, 6);
-        ctx.fillStyle = "rgba(0,0,255,0.3)";
-        ctx.fillRect(x+75, y+6, 24, 6);
-        ctx.fillStyle = "#222";
-        ctx.fillRect(x+18, y+135, 21, 12);
-        ctx.fillRect(x+87, y+135, 21, 12);
-    }
-    function drawSpeedometer() {
-        const x = GAME_WIDTH - 200, y = 15, r = 33;
-        ctx.beginPath();
-        ctx.arc(x + r, y + r, r, 0, Math.PI * 2);
-        ctx.fillStyle = "#1a1a1a";
-        ctx.fill();
-        ctx.strokeStyle = "#dddddd";
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        for (let i = 0; i <= 10; i++) {
-            let angle = -Math.PI/2 + (i / 10) * Math.PI;
-            let x1 = x + r + Math.cos(angle) * (r - 6);
-            let y1 = y + r + Math.sin(angle) * (r - 6);
-            let x2 = x + r + Math.cos(angle) * (r - 12);
-            let y2 = y + r + Math.sin(angle) * (r - 12);
-            ctx.beginPath();
-            ctx.moveTo(x1, y1);
-            ctx.lineTo(x2, y2);
-            ctx.strokeStyle = "#ccc";
-            ctx.stroke();
-        }
-        let angleSpeed = -Math.PI/2 + (currentSpeedKmh / 250) * Math.PI;
-        let arrowX = x + r + Math.cos(angleSpeed) * (r - 12);
-        let arrowY = y + r + Math.sin(angleSpeed) * (r - 12);
-        ctx.beginPath();
-        ctx.moveTo(x + r, y + r);
-        ctx.lineTo(arrowX, arrowY);
-        ctx.strokeStyle = "#ff4444";
-        ctx.lineWidth = 4;
-        ctx.stroke();
-        ctx.fillStyle = "#ffffaa";
-        ctx.beginPath();
-        ctx.arc(x + r, y + r, 5, 0, Math.PI*2);
-        ctx.fill();
-        ctx.font = "bold 42px monospace";
-        ctx.fillStyle = "#ffcc77";
-        ctx.fillText(`${Math.floor(currentSpeedKmh)}`, x + r + 45, y + r + 12);
-        ctx.font = "18px monospace";
-        ctx.fillStyle = "#aaa";
-        ctx.fillText("km/h", x + r + 113, y + r + 9);
-    }
-    function drawObjects() {
-        for (let obj of roadObjects) {
-            if (obj.type === TYPE_STAFF) drawStaff(obj.x, obj.y, obj.w, obj.h, obj.angle);
-            else if (obj.type === TYPE_BUMP) drawBump(obj.x, obj.y, obj.w, obj.h);
-            else if (obj.type === TYPE_PIT) drawPit(obj.x, obj.y, obj.w, obj.h);
-            else if (obj.type === TYPE_VEST) drawVest(obj.x, obj.y, obj.w, obj.h);
-            else if (obj.type === TYPE_MULTI) drawMulti(obj.x, obj.y, obj.w, obj.h);
-        }
-    }
-    function drawUI() {
-        drawSpeedometer();
-        if (isPaused && gameRunning) {
-            ctx.font = "bold 42px monospace";
-            ctx.fillStyle = "#ffffaa";
-            ctx.fillText("ПАУЗА", GAME_WIDTH/2-80, GAME_HEIGHT/2);
-        }
-    }
+    function drawStaff(x,y,w,h,angle) { ctx.save(); ctx.translate(x+w/2,y+h/2); ctx.rotate(Math.sin(angle)*0.5); ctx.fillStyle="#111"; ctx.fillRect(-w/2,-h/2,w,h); let step=w/12; for(let i=0;i<12;i++){ ctx.fillStyle=(i%2===0)?"#f4f4f4":"#111"; ctx.fillRect(-w/2+i*step,-h/2,step-0.5,h); } ctx.restore(); }
+    function drawBump(x,y,w,h) { ctx.fillStyle="#555"; ctx.fillRect(x,y+6,w,h); ctx.fillStyle="#FFCC00"; ctx.fillRect(x,y+6,9,h); ctx.fillRect(x+w-9,y+6,9,h); ctx.fillStyle="#777"; for(let i=0;i<6;i++) ctx.fillRect(x+18+i*38,y+12,9,h-12); }
+    function drawPit(x,y,w,h) { let cx=x+w/2, cy=y+h/2; ctx.beginPath(); ctx.ellipse(cx,cy,w/2,h/2.2,0,0,Math.PI*2); ctx.fillStyle="#2b2b2b"; ctx.fill(); ctx.beginPath(); ctx.ellipse(cx,cy+3,w/2-12,h/2.8,0,0,Math.PI*2); ctx.fillStyle="#111"; ctx.fill(); ctx.fillStyle="#5a4a3a"; ctx.fillRect(x+30,y+18,12,5); ctx.fillRect(x+w-60,y+27,18,5); ctx.fillRect(x+75,y+h-18,30,3); }
+    function drawVest(x,y,w,h) { ctx.fillStyle="#1a2b4c"; ctx.fillRect(x,y,w,h); ctx.fillStyle="#c0c0c0"; ctx.fillRect(x+12,y+18,w-24,12); ctx.fillRect(x+12,y+h-24,w-24,12); ctx.fillStyle="#FFCC00"; ctx.fillRect(x+30,y+42,36,24); ctx.fillStyle="#000"; ctx.font="bold 20px monospace"; ctx.fillText("ДПС",x+38,y+63); ctx.fillStyle="#2a3d6e"; ctx.fillRect(x+12,y+78,24,24); ctx.fillRect(x+w-36,y+78,24,24); ctx.fillStyle="#aaa"; ctx.fillRect(x+3,y+57,9,12); ctx.fillRect(x+w-12,y+57,9,12); }
+    function drawMulti(x,y,w,h) { ctx.font="bold 42px monospace"; ctx.fillStyle="#FF0000"; ctx.fillText("X",x+6,y+45); ctx.fillStyle="#FFFF00"; ctx.fillText("2",x+33,y+48); }
+    function drawCar(x,y) { ctx.fillStyle="#f5f5f5"; ctx.fillRect(x+12,y+30,102,108); ctx.fillStyle="#3a4f66"; ctx.fillRect(x+27,y+42,27,42); ctx.fillRect(x+72,y+42,27,42); ctx.fillStyle="#1f4880"; ctx.fillRect(x+12,y+90,102,18); ctx.fillStyle="#fff"; ctx.font="bold 15px monospace"; ctx.fillText("ДПС",x+48,y+105); ctx.font="12px monospace"; ctx.fillStyle="#ffdd99"; ctx.fillText("ПОЛИЦИЯ",x+39,y+117); ctx.fillStyle="#d33"; ctx.fillRect(x+18,y+78,15,18); ctx.fillRect(x+93,y+78,15,18); ctx.fillStyle="#fff"; ctx.fillRect(x+42,y+132,42,12); ctx.fillStyle="#000"; ctx.font="9px monospace"; ctx.fillText("A123BC",x+45,y+143); let red=(Math.sin(Date.now()*0.015)>0)?"#f44":"#faa"; let blue=(Math.sin(Date.now()*0.015+2)>0)?"#44f":"#aaf"; ctx.fillStyle=red; ctx.fillRect(x+30,y+12,18,12); ctx.fillStyle=blue; ctx.fillRect(x+78,y+12,18,12); ctx.fillStyle="rgba(255,0,0,0.3)"; ctx.fillRect(x+27,y+6,24,6); ctx.fillStyle="rgba(0,0,255,0.3)"; ctx.fillRect(x+75,y+6,24,6); ctx.fillStyle="#222"; ctx.fillRect(x+18,y+135,21,12); ctx.fillRect(x+87,y+135,21,12); }
+    function drawSpeedometer() { const x=GAME_WIDTH-200, y=15, r=33; ctx.beginPath(); ctx.arc(x+r,y+r,r,0,Math.PI*2); ctx.fillStyle="#1a1a1a"; ctx.fill(); ctx.strokeStyle="#ddd"; ctx.stroke(); for(let i=0;i<=10;i++){ let ang=-Math.PI/2+(i/10)*Math.PI; let x1=x+r+Math.cos(ang)*(r-6); let y1=y+r+Math.sin(ang)*(r-6); let x2=x+r+Math.cos(ang)*(r-12); let y2=y+r+Math.sin(ang)*(r-12); ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.strokeStyle="#ccc"; ctx.stroke(); } let ang=-Math.PI/2+(currentSpeedKmh/250)*Math.PI; let ax=x+r+Math.cos(ang)*(r-12); let ay=y+r+Math.sin(ang)*(r-12); ctx.beginPath(); ctx.moveTo(x+r,y+r); ctx.lineTo(ax,ay); ctx.strokeStyle="#f44"; ctx.lineWidth=4; ctx.stroke(); ctx.fillStyle="#ffffaa"; ctx.beginPath(); ctx.arc(x+r,y+r,5,0,Math.PI*2); ctx.fill(); ctx.font="bold 42px monospace"; ctx.fillStyle="#ffcc77"; ctx.fillText(Math.floor(currentSpeedKmh), x+r+45, y+r+12); ctx.font="18px monospace"; ctx.fillStyle="#aaa"; ctx.fillText("km/h", x+r+113, y+r+9); }
+    function drawObjects() { for(let obj of roadObjects) { if(obj.type===TYPE_STAFF) drawStaff(obj.x,obj.y,obj.w,obj.h,obj.angle); else if(obj.type===TYPE_BUMP) drawBump(obj.x,obj.y,obj.w,obj.h); else if(obj.type===TYPE_PIT) drawPit(obj.x,obj.y,obj.w,obj.h); else if(obj.type===TYPE_VEST) drawVest(obj.x,obj.y,obj.w,obj.h); else if(obj.type===TYPE_MULTI) drawMulti(obj.x,obj.y,obj.w,obj.h); } }
+    function drawUI() { drawSpeedometer(); if(isPaused && gameRunning){ ctx.font="bold 42px monospace"; ctx.fillStyle="#ffffaa"; ctx.fillText("ПАУЗА", GAME_WIDTH/2-80, GAME_HEIGHT/2); } }
+
     function gameLoop() {
         if (!gameRunning) { if (animationId) cancelAnimationFrame(animationId); return; }
         if (!isPaused) { updateTimers(); updateObjects(); trySpawn(); }
         drawRoad(); drawObjects(); drawCar(LANE_POSITIONS[currentLane] - CAR_WIDTH/2, CAR_Y); drawUI();
         animationId = requestAnimationFrame(gameLoop);
     }
-    function endGame() {
+
+    async function endGame() {
         if (animationId) cancelAnimationFrame(animationId);
         gameRunning = false;
-        showMessage("🚨 КОНЕЦ СМЕНЫ", `Вы собрали ${score} жезлов. Рекорд: ${guestMode ? "не сохраняется" : getUserRecord(currentUser)}`, () => resetGame());
+        if (!guestMode && currentUser && score > 0) {
+            await updateUserRecord(currentUser, score);
+        }
+        showMessage("🚨 КОНЕЦ СМЕНЫ", `Вы собрали ${score} жезлов. Рекорд: ${guestMode ? "не сохраняется" : await getUserRecord(currentUser)}`, () => resetGame());
     }
+
     function resetGame() {
         if (animationId) cancelAnimationFrame(animationId);
         gameRunning = true;
@@ -776,7 +506,7 @@
         multiplierTimer = 0;
         roadObjects = [];
         currentLane = 1;
-        spawnGap = 55;
+        updateSpawnGap(); // Установить начальный интервал спавна
         updateUI();
         function loop() {
             if (!gameRunning) return;
@@ -785,6 +515,100 @@
             animationId = requestAnimationFrame(loop);
         }
         animationId = requestAnimationFrame(loop);
+    }
+
+    // Модальные окна
+    function showMessage(title, text, onClose) {
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.innerHTML = `<div class="modal-card"><h2>${title}</h2><p>${text}</p><button id="msgOkBtn">ОК</button></div>`;
+        document.body.appendChild(modal);
+        modal.querySelector('#msgOkBtn').onclick = () => { modal.remove(); if(onClose) onClose(); };
+    }
+
+    function showRules(callback) {
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.innerHTML = `<div class="modal-card"><h2>🚓 ДОБРО ПОЖАЛОВАТЬ</h2><ul style="text-align:left;"><li>🎯 Цель: собирайте чёрно-белые жезлы.</li><li>✨ Бонус X2 — удвоение очков.</li><li>⚠️ Не наезжайте на ямы и лежачих.</li><li>🛡️ Бронежилет — неуязвимость 5 сек.</li><li>📈 Скорость растёт каждые 5 сек до 250 км/ч.</li><li>👆 Управление: касания левой/правой половины экрана.</li><li>⏸️ Кнопка "Пауза" — остановить игру.</li></ul><button id="rulesOkBtn">ТАК ТОЧНО!</button></div>`;
+        document.body.appendChild(modal);
+        modal.querySelector('#rulesOkBtn').onclick = () => { modal.remove(); if(callback) callback(); };
+    }
+
+    function showLoginForm() {
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.innerHTML = `<div class="modal-card"><h2>🚔 АВТОРИЗАЦИЯ</h2><input type="text" id="loginInput" placeholder="Логин"><input type="password" id="passInput" placeholder="Пароль"><div style="display:flex; justify-content:center; gap:10px;"><button id="loginBtn">Войти</button><button id="registerBtn">Регистрация</button></div><button id="guestBtn" class="guest-btn">Играть как гость</button><div id="authError" class="error-msg"></div></div>`;
+        document.body.appendChild(modal);
+        const loginInput = modal.querySelector('#loginInput');
+        const passInput = modal.querySelector('#passInput');
+        const loginBtn = modal.querySelector('#loginBtn');
+        const registerBtn = modal.querySelector('#registerBtn');
+        const guestBtn = modal.querySelector('#guestBtn');
+        const errorDiv = modal.querySelector('#authError');
+        loginBtn.onclick = async () => {
+            errorDiv.innerText = '';
+            const login = loginInput.value.trim();
+            const pass = passInput.value;
+            if (!login || !pass) { errorDiv.innerText = "Заполните поля"; return; }
+            const err = await loginUser(login, pass);
+            if (err) { errorDiv.innerText = err; return; }
+            currentUser = login;
+            guestMode = false;
+            modal.remove();
+            showRules(() => startGameAfterAuth());
+        };
+        registerBtn.onclick = () => { modal.remove(); showRegisterForm(); };
+        guestBtn.onclick = () => {
+            currentUser = null;
+            guestMode = true;
+            modal.remove();
+            showRules(() => startGameAfterAuth());
+        };
+    }
+
+    function showRegisterForm() {
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.innerHTML = `<div class="modal-card"><h2>📝 РЕГИСТРАЦИЯ</h2><input type="text" id="regLogin" placeholder="Логин"><input type="password" id="regPass" placeholder="Пароль"><input type="password" id="regConfirm" placeholder="Повторите пароль"><div style="display:flex; justify-content:center; gap:10px;"><button id="regSubmitBtn">Зарегистрироваться</button><button id="backToLoginBtn" class="secondary">Назад</button></div><div id="regError" class="error-msg"></div></div>`;
+        document.body.appendChild(modal);
+        const loginInput = modal.querySelector('#regLogin');
+        const passInput = modal.querySelector('#regPass');
+        const confirmInput = modal.querySelector('#regConfirm');
+        const submitBtn = modal.querySelector('#regSubmitBtn');
+        const backBtn = modal.querySelector('#backToLoginBtn');
+        const errorDiv = modal.querySelector('#regError');
+        submitBtn.onclick = async () => {
+            errorDiv.innerText = '';
+            const login = loginInput.value.trim();
+            const pass = passInput.value;
+            const confirm = confirmInput.value;
+            const err = await registerUser(login, pass, confirm);
+            if (err) { errorDiv.innerText = err; return; }
+            currentUser = login;
+            guestMode = false;
+            modal.remove();
+            showRules(() => startGameAfterAuth());
+        };
+        backBtn.onclick = () => { modal.remove(); showLoginForm(); };
+    }
+
+    async function showRatingModal() {
+        const top = await getTopPlayers();
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        let html = `<div class="modal-card"><h2>🏆 ТОП-100 ИГРОКОВ</h2><div class="rating-list">`;
+        top.forEach((p, idx) => {
+            let rankClass = '';
+            if (idx === 0) rankClass = 'top1';
+            else if (idx === 1) rankClass = 'top2';
+            else if (idx === 2) rankClass = 'top3';
+            html += `<div class="rating-item ${rankClass}">${idx+1}. ${p.login} — ${p.record} жезлов</div>`;
+        });
+        if (top.length === 0) html += `<div>Нет зарегистрированных игроков</div>`;
+        html += `</div><button id="closeRating">ЗАКРЫТЬ</button></div>`;
+        modal.innerHTML = html;
+        document.body.appendChild(modal);
+        modal.querySelector('#closeRating').onclick = () => modal.remove();
     }
 
     function exitToAuth() {
@@ -813,43 +637,32 @@
         ratingBtn.onclick = () => showRatingModal();
         exitBtn.onclick = () => exitToAuth();
 
-        let initialRecord = guestMode ? 0 : getUserRecord(currentUser);
-        recordSpan.innerText = guestMode ? "—" : initialRecord;
-
-        // Управление (работает)
+        updateUI();
         function left() { if (gameRunning && !isPaused) currentLane = Math.max(0, currentLane-1); }
         function right() { if (gameRunning && !isPaused) currentLane = Math.min(2, currentLane+1); }
-        // Отключаем старые обработчики, чтобы не дублировались
-        canvas.removeEventListener('touchstart', canvas._touchHandler);
-        canvas.removeEventListener('mousedown', canvas._mouseHandler);
-        canvas._touchHandler = (e) => {
+        canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
             if (!gameRunning || isPaused) return;
             const rect = canvas.getBoundingClientRect();
             const scaleX = GAME_WIDTH / rect.width;
             const touchX = (e.touches[0].clientX - rect.left) * scaleX;
             touchX < GAME_WIDTH/2 ? left() : right();
-        };
-        canvas._mouseHandler = (e) => {
+        });
+        canvas.addEventListener('mousedown', (e) => {
             if (!gameRunning || isPaused) return;
             const rect = canvas.getBoundingClientRect();
             const scaleX = GAME_WIDTH / rect.width;
             const mouseX = (e.clientX - rect.left) * scaleX;
             mouseX < GAME_WIDTH/2 ? left() : right();
-        };
-        canvas.addEventListener('touchstart', canvas._touchHandler);
-        canvas.addEventListener('mousedown', canvas._mouseHandler);
-
+        });
         pauseBtn.onclick = () => {
             if (!gameRunning) return;
             isPaused = !isPaused;
             pauseBtn.innerText = isPaused ? "▶️ ПРОДОЛЖИТЬ" : "⏸️ ПАУЗА";
-            updateUI();
         };
         resetGame();
     }
 
-    // Запуск
     showLoginForm();
 </script>
 </body>
