@@ -45,8 +45,9 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
             gap: 10px;
+            min-height: 52px;
         }
         .title-group {
             flex: 1;
@@ -93,6 +94,8 @@
             cursor: pointer;
             backdrop-filter: blur(4px);
             font-family: monospace;
+            transition: none;
+            flex-shrink: 0;
         }
         .exit-btn { color: #ffaa88; font-size: 0.8rem; }
         .pause-btn { font-size: 0.9rem; }
@@ -223,27 +226,35 @@
 
 <script>
     // ==================== НАСТРОЙКИ ====================
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw2aOaDI9bqcPIW4IrNU9_d1HRmk3GOgg1Ku-GWTTt6arFedmmar1wR1L6ANfhgznObOQ/exec';
-    const API_SECRET = 'my_super_secret_key_123'; // Должен совпадать с ключом в скрипте Google Apps Script
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyurVIUa9bFMFV9lBxU3sUUcbnhTIA8d34J1hRKESSiVsVbnKVupZUkNUpdQAa7W8RUYA/exec';
+    const API_SECRET = 'my_super_secret_key_123';
     // =================================================
 
-    // Функция для отправки запросов к Google Script
-    async function apiRequest(action, data = {}) {
-        try {
-            const response = await fetch(SCRIPT_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action, secret: API_SECRET, ...data })
-            });
-            const result = await response.json();
-            return result;
-        } catch (error) {
-            console.error('API Error:', error);
-            return { success: false, error: 'Ошибка соединения с сервером' };
+    // JSONP-запрос (обходит CORS)
+    function jsonpRequest(action, data, callback) {
+        const callbackName = 'jsonp_cb_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+        window[callbackName] = function(response) {
+            delete window[callbackName];
+            document.body.removeChild(script);
+            callback(response);
+        };
+        let url = `${SCRIPT_URL}?action=${action}&secret=${API_SECRET}&callback=${callbackName}`;
+        for (let key in data) {
+            if (data[key] !== undefined && data[key] !== null) {
+                url += `&${key}=${encodeURIComponent(data[key])}`;
+            }
         }
+        const script = document.createElement('script');
+        script.src = url;
+        document.body.appendChild(script);
     }
 
-    // Хеширование пароля (SHA-256)
+    function apiRequest(action, data = {}) {
+        return new Promise((resolve) => {
+            jsonpRequest(action, data, resolve);
+        });
+    }
+
     async function hashPassword(password) {
         const encoder = new TextEncoder();
         const data = encoder.encode(password);
@@ -251,7 +262,6 @@
         return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
-    // Регистрация
     async function registerUser(login, password, confirm) {
         if (!login || !password) return "Заполните все поля";
         if (password !== confirm) return "Пароли не совпадают";
@@ -261,28 +271,33 @@
         return result.success ? null : (result.error || "Ошибка регистрации");
     }
 
-    // Авторизация
+    // Храним текущий рекорд авторизованного пользователя в переменной
+    let currentUserRecord = 0;
+
     async function loginUser(login, password) {
         login = login.toLowerCase();
         const hashed = await hashPassword(password);
         const result = await apiRequest('login', { login, passwordHash: hashed });
         if (result.success) {
-            return { success: true, record: result.record };
+            currentUserRecord = result.record || 0;
+            return { success: true, record: currentUserRecord };
         } else {
             return { success: false, error: result.error || "Ошибка входа" };
         }
     }
 
-    // Обновление рекорда
     async function updateUserRecord(login, newRecord) {
         if (!login) return;
         login = login.toLowerCase();
-        await apiRequest('update_score', { login, newScore: newRecord });
+        const result = await apiRequest('update_score', { login, newScore: newRecord });
+        if (result.success && newRecord > currentUserRecord) {
+            currentUserRecord = newRecord;
+        }
+        return result;
     }
 
-    // Получить топ-100
     async function getTopPlayers() {
-        const result = await apiRequest('get_top');
+        const result = await apiRequest('get_top', {});
         return result.success ? result.top : [];
     }
 
@@ -325,14 +340,13 @@
         dynamicSpawnGap = Math.floor(newGap);
     }
 
-    async function updateUI() {
+    function updateUI() {
         scoreSpan.innerText = score;
-        let personalBest = 0;
-        if (!guestMode && currentUser) {
-            const res = await loginUser(currentUser, ''); // упрощённо, но работает
-            if (res.success) personalBest = res.record;
+        if (guestMode) {
+            recordSpan.innerText = "—";
+        } else {
+            recordSpan.innerText = currentUserRecord;
         }
-        recordSpan.innerText = guestMode ? "—" : personalBest;
         multiplierBadge.innerText = multiplierActive ? 'x2' : 'x1';
         multiplierBadge.style.background = multiplierActive ? '#ffaa44' : '#ffffffcc';
         invincibleSpan.innerHTML = invincibleActive ? `${Math.ceil(invincibleFramesLeft/60)} сек 🛡️` : 'НЕТ';
@@ -412,7 +426,6 @@
         }
     }
 
-    // Отрисовка (полная, но компактная)
     function drawRoad() {
         ctx.fillStyle = "#2a3a2e"; ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
         ctx.fillStyle = "#1f2c24"; ctx.fillRect(LEFT_OFFSET, 0, GAME_WIDTH - 2*LEFT_OFFSET, GAME_HEIGHT);
@@ -444,7 +457,7 @@
         if (!guestMode && currentUser && score > 0) {
             await updateUserRecord(currentUser, score);
         }
-        let finalRecord = guestMode ? "не сохраняется" : ((await loginUser(currentUser, ''))).record;
+        let finalRecord = guestMode ? "не сохраняется" : currentUserRecord;
         showMessage("🚨 КОНЕЦ СМЕНЫ", `Вы собрали ${score} жезлов. Рекорд: ${finalRecord}`, () => resetGame());
     }
 
@@ -474,7 +487,7 @@
         animationId = requestAnimationFrame(loop);
     }
 
-    // Модальные окна и UI формы
+    // Модальные окна
     function showMessage(title, text, onClose) {
         const modal = document.createElement('div');
         modal.className = 'modal';
@@ -486,7 +499,7 @@
     function showRules(callback) {
         const modal = document.createElement('div');
         modal.className = 'modal';
-        modal.innerHTML = `<div class="modal-card"><h2>🚓 ДОБРО ПОЖАЛОВАТЬ</h2><ul style="text-align:left;"><li>🎯 Цель: собирайте чёрно-белые жезлы.</li><li>✨ Бонус X2 — удвоение очков.</li><li>⚠️ Не наезжайте на ямы и лежачих.</li><li>🛡️ Бронежилет — неуязвимость 5 сек.</li><li>📈 Скорость растёт каждые 5 сек до 250 км/ч.</li><li>👆 Управление: касания левой/правой половины экрана.</li><li>⏸️ Кнопка "Пауза" — остановить игру.</li></ul><button id="rulesOkBtn">ТАК ТОЧНО!</button></div>`;
+        modal.innerHTML = `<div class="modal-card"><h2>🚓 ДОБРО ПОЖАЛОВАТЬ</h2><ul style="text-align:left;"><li>🎯 Цель: соберите как можно больше жезлов.</li><li>✨ Бонус X2 — временное удвоение очков.</li><li>⚠️ Не наезжайте на ямы и искусственные неровности.</li><li>🛡️ Бронежилет — временная неуязвимость.</li><li>📈 Постоянное увеличение скорости.</li><li>👆 Управление: касания левой/правой половины экрана.</li><li>⏸️ Кнопка "Пауза" — остановить игру.</li></ul><button id="rulesOkBtn">ТАК ТОЧНО!</button></div>`;
         document.body.appendChild(modal);
         modal.querySelector('#rulesOkBtn').onclick = () => { modal.remove(); if(callback) callback(); };
     }
@@ -518,6 +531,7 @@
         guestBtn.onclick = () => {
             currentUser = null;
             guestMode = true;
+            currentUserRecord = 0;
             modal.remove();
             showRules(() => startGameAfterAuth());
         };
@@ -541,10 +555,16 @@
             const confirm = confirmInput.value;
             const err = await registerUser(login, pass, confirm);
             if (err) { errorDiv.innerText = err; return; }
-            currentUser = login;
-            guestMode = false;
-            modal.remove();
-            showRules(() => startGameAfterAuth());
+            // После регистрации автоматически логиним
+            const result = await loginUser(login, pass);
+            if (result.success) {
+                currentUser = login;
+                guestMode = false;
+                modal.remove();
+                showRules(() => startGameAfterAuth());
+            } else {
+                errorDiv.innerText = "Ошибка автоматического входа";
+            }
         };
         backBtn.onclick = () => { modal.remove(); showLoginForm(); };
     }
@@ -574,6 +594,7 @@
         document.getElementById('gameContainer').style.display = 'none';
         currentUser = null;
         guestMode = false;
+        currentUserRecord = 0;
         showLoginForm();
     }
 
@@ -616,11 +637,12 @@
             if (!gameRunning) return;
             isPaused = !isPaused;
             pauseBtn.innerText = isPaused ? "▶️ ПРОДОЛЖИТЬ" : "⏸️ ПАУЗА";
+            updateUI();
         };
         resetGame();
     }
 
-    // Запуск игры
+    // Запуск
     showLoginForm();
 </script>
 </body>
