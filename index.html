@@ -26,7 +26,7 @@
             box-shadow: 0 25px 40px rgba(0, 0, 0, 0.6);
             padding: 12px 16px 20px 16px;
             width: 100%;
-            max-width: 600px;
+            max-width: 720px;
         }
         canvas {
             display: block;
@@ -79,6 +79,18 @@
             letter-spacing: 1px;
             backdrop-filter: blur(4px);
         }
+        .pause-btn {
+            background: rgba(0,0,0,0.6);
+            border: none;
+            color: white;
+            font-size: 1rem;
+            font-weight: bold;
+            padding: 6px 14px;
+            border-radius: 40px;
+            cursor: pointer;
+            backdrop-filter: blur(4px);
+            font-family: monospace;
+        }
         .stats-panel {
             display: flex;
             justify-content: space-between;
@@ -120,32 +132,6 @@
             border-radius: 40px;
             text-align: center;
         }
-        footer {
-            text-align: center;
-            font-size: 0.65rem;
-            color: #9cb8cf;
-            margin-top: 10px;
-        }
-        /* Мобильные касания */
-        .touch-zone {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 12px;
-            gap: 16px;
-        }
-        .touch-btn {
-            flex: 1;
-            background: rgba(0,0,0,0.5);
-            text-align: center;
-            padding: 10px 0;
-            border-radius: 60px;
-            color: white;
-            font-weight: bold;
-            font-size: 1.2rem;
-            backdrop-filter: blur(4px);
-            font-family: monospace;
-        }
-        /* Правила */
         .rules-overlay {
             position: fixed;
             top: 0;
@@ -200,7 +186,6 @@
             width: 100%;
         }
     </style>
-    <!-- Генерация favicon: пиксельный жезл -->
     <script>
         (function() {
             const favCanvas = document.createElement('canvas');
@@ -239,9 +224,10 @@
         <div class="game-header">
             <div class="brand">🚔 by Chilikin <span>Разработчик</span></div>
             <div class="game-title">ПАТРУЛЬ ДПС</div>
+            <button class="pause-btn" id="pauseBtn">⏸️ ПАУЗА</button>
         </div>
 
-        <canvas id="gameCanvas" width="900" height="550" style="width:100%; height:auto; max-width:900px; aspect-ratio:900/550"></canvas>
+        <canvas id="gameCanvas" width="1000" height="600" style="width:100%; height:auto;"></canvas>
 
         <div class="stats-panel">
             <div class="score-box">📊 ЖЕЗЛОВ: <span id="scoreValue" style="font-size:1.4rem; font-weight:bold;">0</span></div>
@@ -250,13 +236,8 @@
             <div class="invincible-box">🛡️ БРОНЯ: <span id="invincibleBadge">НЕТ</span></div>
         </div>
         <div style="text-align: center; margin-top: 10px;">
-            <div class="controls-hint">◀  ▶  стрелки ← →  |  касайся левой/правой части экрана</div>
+            <div class="controls-hint">👆 КАСАЙСЯ ЛЕВОЙ / ПРАВОЙ ПОЛОВИНЫ ЭКРАНА</div>
         </div>
-        <div class="touch-zone">
-            <div class="touch-btn" id="leftTouch">◀ ЛЕВО</div>
-            <div class="touch-btn" id="rightTouch">ПРАВО ▶</div>
-        </div>
-        <footer>пиксельная аркада | бронежилет 5 сек | скорость 60-220 км/ч</footer>
     </div>
 </div>
 
@@ -266,23 +247,26 @@
         const ctx = canvas.getContext('2d');
         ctx.imageSmoothingEnabled = false;
         
-        // фиксированные размеры игрового мира (900x550)
-        const GAME_WIDTH = 900;
-        const GAME_HEIGHT = 550;
+        const GAME_WIDTH = 1000;
+        const GAME_HEIGHT = 600;
         canvas.width = GAME_WIDTH;
         canvas.height = GAME_HEIGHT;
         
-        // Параметры дороги (3 полосы)
-        const LANE_COUNT = 3;
-        const LANE_WIDTH = 200;
-        const FIRST_LANE_CENTER = 150;
-        const LANE_POSITIONS = [FIRST_LANE_CENTER, FIRST_LANE_CENTER + LANE_WIDTH, FIRST_LANE_CENTER + LANE_WIDTH * 2];
+        // Равномерные полосы: по 300 пикселей, отступы слева/справа по 50
+        const LANE_WIDTH = 300;
+        const LEFT_OFFSET = 50;
+        const LANE_POSITIONS = [
+            LEFT_OFFSET + LANE_WIDTH/2,
+            LEFT_OFFSET + LANE_WIDTH/2 + LANE_WIDTH,
+            LEFT_OFFSET + LANE_WIDTH/2 + 2*LANE_WIDTH
+        ]; // центры: 200, 500, 800
         
         const CAR_WIDTH = 84;
         const CAR_HEIGHT = 96;
-        const CAR_Y = GAME_HEIGHT - CAR_HEIGHT - 15;
+        const CAR_Y = GAME_HEIGHT - CAR_HEIGHT - 20;
         
         let gameRunning = false;
+        let isPaused = false;
         let animationId = null;
         let score = 0;
         let maxScore = 0;
@@ -306,11 +290,11 @@
         const TYPE_VEST = 'vest';
         const TYPE_MULTI = 'multi';
         
-        // UI элементы
         const scoreSpan = document.getElementById('scoreValue');
         const recordSpan = document.getElementById('recordValue');
         const multiplierBadge = document.getElementById('multiplierBadge');
         const invincibleSpan = document.getElementById('invincibleBadge');
+        const pauseBtn = document.getElementById('pauseBtn');
         
         function kmhToSpeed(kmh) {
             return kmh * (3.2 / 60);
@@ -333,38 +317,36 @@
         }
         
         function addScore(amount) {
-            if (!gameRunning) return;
+            if (!gameRunning || isPaused) return;
             let final = multiplierActive ? amount * 2 : amount;
             score += final;
-            if (score > maxScore) {
-                maxScore = score;
-            }
+            if (score > maxScore) maxScore = score;
             updateUI();
         }
         
         function activateVest() {
-            if (!gameRunning) return;
+            if (!gameRunning || isPaused) return;
             invincibleActive = true;
             invincibleFramesLeft = 300;
             updateUI();
         }
         
         function activateMultiplier() {
-            if (!gameRunning) return;
+            if (!gameRunning || isPaused) return;
             multiplierActive = true;
             multiplierTimer = 380;
             updateUI();
         }
         
         function spawnObject() {
-            if (!gameRunning) return;
+            if (!gameRunning || isPaused) return;
             let r = Math.random();
             let type;
             if (r < 0.55) type = TYPE_STAFF;
             else if (r < 0.82) type = Math.random() < 0.6 ? TYPE_PIT : TYPE_BUMP;
             else type = Math.random() < 0.6 ? TYPE_VEST : TYPE_MULTI;
             
-            let lane = Math.floor(Math.random() * LANE_COUNT);
+            let lane = Math.floor(Math.random() * 3);
             let w, h;
             if (type === TYPE_STAFF) { w = 48; h = 5; }
             else if (type === TYPE_PIT) { w = 130; h = 130; }
@@ -377,7 +359,7 @@
         }
         
         function updateObjects() {
-            if (!gameRunning) return;
+            if (!gameRunning || isPaused) return;
             const carX = LANE_POSITIONS[currentLane] - CAR_WIDTH/2;
             const carRect = { x: carX, y: CAR_Y, w: CAR_WIDTH, h: CAR_HEIGHT };
             
@@ -419,6 +401,7 @@
         }
         
         function updateTimers() {
+            if (!gameRunning || isPaused) return;
             if (multiplierActive) {
                 multiplierTimer--;
                 if (multiplierTimer <= 0) { multiplierActive = false; updateUI(); }
@@ -435,7 +418,7 @@
         }
         
         function updateSpeedByTime() {
-            if (!gameRunning) return;
+            if (!gameRunning || isPaused) return;
             if (frameCounter % 600 === 0 && frameCounter !== 0) {
                 if (currentSpeedKmh < 220) {
                     currentSpeedKmh = Math.min(220, currentSpeedKmh + 10);
@@ -446,7 +429,7 @@
         }
         
         function trySpawn() {
-            if (!gameRunning) return;
+            if (!gameRunning || isPaused) return;
             frameCounter++;
             updateSpeedByTime();
             let gap = Math.max(38, spawnGap - Math.floor(score / 100));
@@ -456,21 +439,22 @@
             }
         }
         
-        // ---------- ОТРИСОВКА (полностью пиксельная, без изменений) ----------
+        // ---------- ОТРИСОВКА ----------
         function drawRoad() {
             ctx.fillStyle = "#2a3a2e";
             ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
             ctx.fillStyle = "#1f2c24";
-            ctx.fillRect(30, 0, GAME_WIDTH-60, GAME_HEIGHT);
+            ctx.fillRect(LEFT_OFFSET, 0, GAME_WIDTH - 2*LEFT_OFFSET, GAME_HEIGHT);
             ctx.fillStyle = "#ad9e6b";
-            ctx.fillRect(25, 0, 5, GAME_HEIGHT);
-            ctx.fillRect(GAME_WIDTH-30, 0, 5, GAME_HEIGHT);
+            ctx.fillRect(LEFT_OFFSET-5, 0, 5, GAME_HEIGHT);
+            ctx.fillRect(GAME_WIDTH-LEFT_OFFSET, 0, 5, GAME_HEIGHT);
+            // рисуем разметку между полосами
             ctx.beginPath();
             ctx.strokeStyle = "#f9f3cf";
             ctx.lineWidth = 5;
             ctx.setLineDash([25, 30]);
-            for (let i = 1; i < LANE_COUNT; i++) {
-                let lineX = LANE_POSITIONS[i] - LANE_WIDTH/2;
+            for (let i = 1; i < 3; i++) {
+                let lineX = LEFT_OFFSET + i * LANE_WIDTH;
                 ctx.beginPath();
                 ctx.moveTo(lineX, 0);
                 ctx.lineTo(lineX, GAME_HEIGHT);
@@ -546,9 +530,7 @@
             ctx.fillText("2", x+22, y+32);
         }
         
-        let blinker = 0;
         function drawCar(x, y) {
-            blinker++;
             ctx.fillStyle = "#f5f5f5";
             ctx.fillRect(x+8, y+20, 68, 72);
             ctx.fillStyle = "#3a4f66";
@@ -646,6 +628,11 @@
                 ctx.fillStyle = "#ffe484";
                 ctx.fillText("x2 АКТИВЕН!", GAME_WIDTH-150, 70);
             }
+            if (isPaused && gameRunning) {
+                ctx.font = "bold 32px monospace";
+                ctx.fillStyle = "#ffffaa";
+                ctx.fillText("ПАУЗА", GAME_WIDTH/2-60, GAME_HEIGHT/2);
+            }
         }
         
         // ---------- ИГРОВОЙ ЦИКЛ ----------
@@ -654,9 +641,11 @@
                 if (animationId) cancelAnimationFrame(animationId);
                 return;
             }
-            updateTimers();
-            updateObjects();
-            trySpawn();
+            if (!isPaused) {
+                updateTimers();
+                updateObjects();
+                trySpawn();
+            }
             drawRoad();
             drawObjects();
             drawCar(LANE_POSITIONS[currentLane] - CAR_WIDTH/2, CAR_Y);
@@ -687,6 +676,8 @@
         function resetGame() {
             if (animationId) cancelAnimationFrame(animationId);
             gameRunning = true;
+            isPaused = false;
+            pauseBtn.innerText = "⏸️ ПАУЗА";
             score = 0;
             currentSpeedKmh = 60;
             currentSpeed = kmhToSpeed(60);
@@ -701,9 +692,11 @@
             updateUI();
             function loop() {
                 if (!gameRunning) return;
-                updateTimers();
-                updateObjects();
-                trySpawn();
+                if (!isPaused) {
+                    updateTimers();
+                    updateObjects();
+                    trySpawn();
+                }
                 drawRoad();
                 drawObjects();
                 drawCar(LANE_POSITIONS[currentLane] - CAR_WIDTH/2, CAR_Y);
@@ -713,23 +706,13 @@
             animationId = requestAnimationFrame(loop);
         }
         
-        // Управление для мобильных и ПК
-        function left() { if (gameRunning) currentLane = Math.max(0, currentLane-1); }
-        function right() { if (gameRunning) currentLane = Math.min(LANE_COUNT-1, currentLane+1); }
+        // Управление только касанием левой/правой части экрана
+        function left() { if (gameRunning && !isPaused) currentLane = Math.max(0, currentLane-1); }
+        function right() { if (gameRunning && !isPaused) currentLane = Math.min(2, currentLane+1); }
         
-        window.addEventListener('keydown', (e) => {
-            if (!gameRunning) return;
-            if (e.key === 'ArrowLeft') { e.preventDefault(); left(); }
-            if (e.key === 'ArrowRight') { e.preventDefault(); right(); }
-        });
-        
-        // Сенсорные кнопки
-        document.getElementById('leftTouch').addEventListener('click', left);
-        document.getElementById('rightTouch').addEventListener('click', right);
-        
-        // Касания по самому canvas (левая/правая половина)
         canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
+            if (!gameRunning || isPaused) return;
             const rect = canvas.getBoundingClientRect();
             const scaleX = GAME_WIDTH / rect.width;
             const touchX = (e.touches[0].clientX - rect.left) * scaleX;
@@ -737,6 +720,7 @@
             else right();
         });
         canvas.addEventListener('mousedown', (e) => {
+            if (!gameRunning || isPaused) return;
             const rect = canvas.getBoundingClientRect();
             const scaleX = GAME_WIDTH / rect.width;
             const mouseX = (e.clientX - rect.left) * scaleX;
@@ -744,7 +728,14 @@
             else right();
         });
         
-        // Стартовые правила
+        // Кнопка паузы
+        pauseBtn.addEventListener('click', () => {
+            if (!gameRunning) return;
+            isPaused = !isPaused;
+            pauseBtn.innerText = isPaused ? "▶️ ПРОДОЛЖИТЬ" : "⏸️ ПАУЗА";
+            updateUI();
+        });
+        
         function showRulesAndStart() {
             const rulesDiv = document.createElement('div');
             rulesDiv.className = 'rules-overlay';
@@ -752,12 +743,13 @@
                 <div class="rules-card">
                     <h2>🚓 ДОБРО ПОЖАЛОВАТЬ 🚓</h2>
                     <ul>
-                        <li>🎯 Цель: собирайте чёрно-белые жезлы → +1 очко.</li>
-                        <li>✨ Бонус X2 — удваивает очки на 6 сек.</li>
-                        <li>🛡️ Бронежилет — неуязвимость 5 сек (проезжайте ямы и лежачих).</li>
-                        <li>⚠️ Ямы и лежачие полицейские — авария без брони.</li>
-                        <li>📈 Скорость +10 км/ч каждые 10 сек (60 → 220).</li>
-                        <li>🎮 Управление: стрелки или касания по экрану / кнопки.</li>
+                        <li>🎯 Цель: собирайте чёрно-белые жезлы.</li>
+                        <li>✨ Бонус X2 — временно удваивает очки.</li>
+                        <li>⚠️ Не наезжайте на ямы и искусственные неровности.</li>
+                        <li>🛡️ Бронежилет — временная неуязвимость.</li>
+                        <li>📈 Повышение скорости в процессе игры.</li>
+                        <li>🎮 Управление: касания по левой/правой половине экрана.</li>
+                        <li>⏸️ Кнопка "Пауза" — остановить игру.</li>
                     </ul>
                     <button id="startGameBtnMobile">ТАК ТОЧНО!</button>
                 </div>
