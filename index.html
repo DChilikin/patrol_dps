@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Патруль ДПС</title>
+    <title>Патруль ДПС: сбор жезлов — аркада ГИБДД</title>
     <style>
         * {
             user-select: none;
@@ -26,7 +26,7 @@
             box-shadow: 0 25px 40px rgba(0, 0, 0, 0.6);
             padding: 12px 16px 20px 16px;
             width: 100%;
-            max-width: 720px;
+            max-width: 750px;
         }
         canvas {
             display: block;
@@ -50,23 +50,25 @@
             gap: 10px;
         }
         .brand {
-            font-size: 0.85rem;
+            font-size: 0.6rem;
             font-weight: 600;
             background: rgba(0,0,0,0.55);
             backdrop-filter: blur(6px);
-            padding: 5px 12px;
+            padding: 4px 10px;
             border-radius: 40px;
             color: #ffdb7e;
-            border-left: 3px solid #d92525;
+            border-left: 2px solid #d92525;
             font-family: monospace;
+            text-align: center;
+            flex: 1;
         }
         .brand span {
             background: #a51c1c;
             color: white;
-            padding: 2px 8px;
+            padding: 1px 6px;
             border-radius: 30px;
-            margin-left: 6px;
-            font-size: 0.7rem;
+            margin-left: 5px;
+            font-size: 0.55rem;
         }
         .game-title {
             font-size: 1.1rem;
@@ -83,9 +85,9 @@
             background: rgba(0,0,0,0.6);
             border: none;
             color: white;
-            font-size: 1rem;
+            font-size: 0.9rem;
             font-weight: bold;
-            padding: 6px 14px;
+            padding: 5px 12px;
             border-radius: 40px;
             cursor: pointer;
             backdrop-filter: blur(4px);
@@ -97,22 +99,22 @@
             background: #0f1f2ad9;
             backdrop-filter: blur(8px);
             margin-top: 12px;
-            padding: 6px 12px;
+            padding: 5px 10px;
             border-radius: 60px;
             color: white;
             font-weight: bold;
-            gap: 8px;
+            gap: 6px;
             flex-wrap: wrap;
             font-family: monospace;
         }
         .score-box, .multiplier-box, .invincible-box, .record-box {
             background: #00000077;
-            padding: 4px 12px;
+            padding: 3px 8px;
             border-radius: 40px;
             display: flex;
             align-items: center;
-            gap: 6px;
-            font-size: 0.9rem;
+            gap: 4px;
+            font-size: 0.7rem;
             flex: 1;
             justify-content: center;
         }
@@ -120,7 +122,7 @@
             background: #ffaa33;
             color: #1e2a2e;
             border-radius: 30px;
-            padding: 2px 10px;
+            padding: 1px 6px;
         }
         .controls-hint {
             font-size: 0.65rem;
@@ -222,16 +224,16 @@
 <div>
     <div class="game-container">
         <div class="game-header">
-            <div class="brand">🚔 by Chilikin <span>Разработчик</span></div>
+            <div class="brand">🚔 by Chilikin <span>разработчик</span></div>
             <div class="game-title">ПАТРУЛЬ ДПС</div>
             <button class="pause-btn" id="pauseBtn">⏸️ ПАУЗА</button>
         </div>
 
-        <canvas id="gameCanvas" width="1000" height="600" style="width:100%; height:auto;"></canvas>
+        <canvas id="gameCanvas" width="1000" height="700" style="width:100%; height:auto;"></canvas>
 
         <div class="stats-panel">
-            <div class="score-box">📊 ЖЕЗЛОВ: <span id="scoreValue" style="font-size:1.4rem; font-weight:bold;">0</span></div>
-            <div class="record-box">🏆 РЕКОРД: <span id="recordValue" style="font-size:1.4rem; font-weight:bold;">0</span></div>
+            <div class="score-box">📊 ЖЕЗЛОВ: <span id="scoreValue" style="font-size:1rem; font-weight:bold;">0</span></div>
+            <div class="record-box">🏆 РЕКОРД: <span id="recordValue" style="font-size:1rem; font-weight:bold;">0</span></div>
             <div class="multiplier-box">✨ МНОЖИТЕЛЬ: <span id="multiplierBadge" class="badge">x1</span></div>
             <div class="invincible-box">🛡️ БРОНЯ: <span id="invincibleBadge">НЕТ</span></div>
         </div>
@@ -248,7 +250,7 @@
         ctx.imageSmoothingEnabled = false;
         
         const GAME_WIDTH = 1000;
-        const GAME_HEIGHT = 600;
+        const GAME_HEIGHT = 700;
         canvas.width = GAME_WIDTH;
         canvas.height = GAME_HEIGHT;
         
@@ -261,9 +263,10 @@
             LEFT_OFFSET + LANE_WIDTH/2 + 2*LANE_WIDTH
         ]; // центры: 200, 500, 800
         
-        const CAR_WIDTH = 84;
-        const CAR_HEIGHT = 96;
-        const CAR_Y = GAME_HEIGHT - CAR_HEIGHT - 20;
+        // Увеличенные размеры объектов (x1.5 от оригинальных)
+        const CAR_WIDTH = 126;    // 84*1.5
+        const CAR_HEIGHT = 144;   // 96*1.5
+        const CAR_Y = GAME_HEIGHT - CAR_HEIGHT - 25;
         
         let gameRunning = false;
         let isPaused = false;
@@ -289,6 +292,15 @@
         const TYPE_BUMP = 'bump';
         const TYPE_VEST = 'vest';
         const TYPE_MULTI = 'multi';
+        
+        // Размеры объектов (x1.5)
+        const OBJECT_SIZES = {
+            staff: { w: 72, h: 8 },    // 48*1.5, 5*1.5
+            pit: { w: 195, h: 195 },   // 130*1.5
+            bump: { w: 255, h: 27 },   // 170*1.5, 18*1.5
+            vest: { w: 96, h: 126 },   // 64*1.5, 84*1.5
+            multi: { w: 60, h: 60 }    // 40*1.5
+        };
         
         const scoreSpan = document.getElementById('scoreValue');
         const recordSpan = document.getElementById('recordValue');
@@ -347,13 +359,9 @@
             else type = Math.random() < 0.6 ? TYPE_VEST : TYPE_MULTI;
             
             let lane = Math.floor(Math.random() * 3);
-            let w, h;
-            if (type === TYPE_STAFF) { w = 48; h = 5; }
-            else if (type === TYPE_PIT) { w = 130; h = 130; }
-            else if (type === TYPE_BUMP) { w = 170; h = 18; }
-            else if (type === TYPE_VEST) { w = 64; h = 84; }
-            else { w = 40; h = 40; }
-            
+            let size = OBJECT_SIZES[type];
+            let w = size.w;
+            let h = size.h;
             let x = LANE_POSITIONS[lane] - w/2;
             roadObjects.push({ type, x, y: -h, w, h, angle: 0 });
         }
@@ -394,7 +402,7 @@
                         roadObjects.splice(i,1); i--; continue;
                     }
                 }
-                if (obj.y > GAME_HEIGHT + 120) {
+                if (obj.y > GAME_HEIGHT + 150) {
                     roadObjects.splice(i,1); i--;
                 }
             }
@@ -439,7 +447,7 @@
             }
         }
         
-        // ---------- ОТРИСОВКА ----------
+        // ---------- ОТРИСОВКА (увеличенные спрайты) ----------
         function drawRoad() {
             ctx.fillStyle = "#2a3a2e";
             ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
@@ -448,7 +456,6 @@
             ctx.fillStyle = "#ad9e6b";
             ctx.fillRect(LEFT_OFFSET-5, 0, 5, GAME_HEIGHT);
             ctx.fillRect(GAME_WIDTH-LEFT_OFFSET, 0, 5, GAME_HEIGHT);
-            // рисуем разметку между полосами
             ctx.beginPath();
             ctx.strokeStyle = "#f9f3cf";
             ctx.lineWidth = 5;
@@ -479,12 +486,12 @@
         
         function drawBump(x, y, w, h) {
             ctx.fillStyle = "#555";
-            ctx.fillRect(x, y+4, w, h);
+            ctx.fillRect(x, y+6, w, h);
             ctx.fillStyle = "#FFCC00";
-            ctx.fillRect(x, y+4, 6, h);
-            ctx.fillRect(x+w-6, y+4, 6, h);
+            ctx.fillRect(x, y+6, 9, h);
+            ctx.fillRect(x+w-9, y+6, 9, h);
             ctx.fillStyle = "#777";
-            for (let i=0; i<6; i++) ctx.fillRect(x+12 + i*25, y+8, 6, h-8);
+            for (let i=0; i<6; i++) ctx.fillRect(x+18 + i*38, y+12, 9, h-12);
         }
         
         function drawPit(x, y, w, h) {
@@ -494,83 +501,83 @@
             ctx.fillStyle = "#2b2b2b";
             ctx.fill();
             ctx.beginPath();
-            ctx.ellipse(cx, cy+2, w/2-8, h/2.8, 0, 0, Math.PI*2);
+            ctx.ellipse(cx, cy+3, w/2-12, h/2.8, 0, 0, Math.PI*2);
             ctx.fillStyle = "#111";
             ctx.fill();
             ctx.fillStyle = "#5a4a3a";
-            ctx.fillRect(x+20, y+12, 8, 3);
-            ctx.fillRect(x+w-40, y+18, 12, 3);
-            ctx.fillRect(x+50, y+h-12, 20, 2);
+            ctx.fillRect(x+30, y+18, 12, 5);
+            ctx.fillRect(x+w-60, y+27, 18, 5);
+            ctx.fillRect(x+75, y+h-18, 30, 3);
         }
         
         function drawVest(x, y, w, h) {
             ctx.fillStyle = "#1a2b4c";
             ctx.fillRect(x, y, w, h);
             ctx.fillStyle = "#c0c0c0";
-            ctx.fillRect(x+8, y+12, w-16, 8);
-            ctx.fillRect(x+8, y+h-16, w-16, 8);
+            ctx.fillRect(x+12, y+18, w-24, 12);
+            ctx.fillRect(x+12, y+h-24, w-24, 12);
             ctx.fillStyle = "#FFCC00";
-            ctx.fillRect(x+20, y+28, 24, 16);
+            ctx.fillRect(x+30, y+42, 36, 24);
             ctx.fillStyle = "#000";
-            ctx.font = "bold 14px monospace";
-            ctx.fillText("ДПС", x+26, y+42);
+            ctx.font = "bold 20px monospace";
+            ctx.fillText("ДПС", x+38, y+63);
             ctx.fillStyle = "#2a3d6e";
-            ctx.fillRect(x+8, y+52, 16, 16);
-            ctx.fillRect(x+w-24, y+52, 16, 16);
+            ctx.fillRect(x+12, y+78, 24, 24);
+            ctx.fillRect(x+w-36, y+78, 24, 24);
             ctx.fillStyle = "#aaa";
-            ctx.fillRect(x+2, y+38, 6, 8);
-            ctx.fillRect(x+w-8, y+38, 6, 8);
+            ctx.fillRect(x+3, y+57, 9, 12);
+            ctx.fillRect(x+w-12, y+57, 9, 12);
         }
         
         function drawMulti(x, y, w, h) {
-            ctx.font = "bold 28px monospace";
+            ctx.font = "bold 42px monospace";
             ctx.fillStyle = "#FF0000";
-            ctx.fillText("X", x+4, y+30);
+            ctx.fillText("X", x+6, y+45);
             ctx.fillStyle = "#FFFF00";
-            ctx.fillText("2", x+22, y+32);
+            ctx.fillText("2", x+33, y+48);
         }
         
         function drawCar(x, y) {
             ctx.fillStyle = "#f5f5f5";
-            ctx.fillRect(x+8, y+20, 68, 72);
+            ctx.fillRect(x+12, y+30, 102, 108);
             ctx.fillStyle = "#3a4f66";
-            ctx.fillRect(x+18, y+28, 18, 28);
-            ctx.fillRect(x+48, y+28, 18, 28);
+            ctx.fillRect(x+27, y+42, 27, 42);
+            ctx.fillRect(x+72, y+42, 27, 42);
             ctx.fillStyle = "#1f4880";
-            ctx.fillRect(x+8, y+60, 68, 12);
+            ctx.fillRect(x+12, y+90, 102, 18);
             ctx.fillStyle = "#fff";
-            ctx.font = "bold 10px monospace";
-            ctx.fillText("ДПС", x+32, y+70);
-            ctx.font = "8px monospace";
+            ctx.font = "bold 15px monospace";
+            ctx.fillText("ДПС", x+48, y+105);
+            ctx.font = "12px monospace";
             ctx.fillStyle = "#ffdd99";
-            ctx.fillText("ПОЛИЦИЯ", x+26, y+78);
+            ctx.fillText("ПОЛИЦИЯ", x+39, y+117);
             ctx.fillStyle = "#d33";
-            ctx.fillRect(x+12, y+52, 10, 12);
-            ctx.fillRect(x+62, y+52, 10, 12);
+            ctx.fillRect(x+18, y+78, 15, 18);
+            ctx.fillRect(x+93, y+78, 15, 18);
             ctx.fillStyle = "#fff";
-            ctx.fillRect(x+28, y+88, 28, 8);
+            ctx.fillRect(x+42, y+132, 42, 12);
             ctx.fillStyle = "#000";
-            ctx.font = "6px monospace";
-            ctx.fillText("A123BC", x+30, y+95);
+            ctx.font = "9px monospace";
+            ctx.fillText("A123BC", x+45, y+143);
             let red = (Math.sin(Date.now() * 0.015) > 0) ? "#f44" : "#faa";
             let blue = (Math.sin(Date.now() * 0.015 + 2) > 0) ? "#44f" : "#aaf";
             ctx.fillStyle = red;
-            ctx.fillRect(x+20, y+8, 12, 8);
+            ctx.fillRect(x+30, y+12, 18, 12);
             ctx.fillStyle = blue;
-            ctx.fillRect(x+52, y+8, 12, 8);
+            ctx.fillRect(x+78, y+12, 18, 12);
             ctx.fillStyle = "rgba(255,0,0,0.3)";
-            ctx.fillRect(x+18, y+4, 16, 4);
+            ctx.fillRect(x+27, y+6, 24, 6);
             ctx.fillStyle = "rgba(0,0,255,0.3)";
-            ctx.fillRect(x+50, y+4, 16, 4);
+            ctx.fillRect(x+75, y+6, 24, 6);
             ctx.fillStyle = "#222";
-            ctx.fillRect(x+12, y+90, 14, 8);
-            ctx.fillRect(x+58, y+90, 14, 8);
+            ctx.fillRect(x+18, y+135, 21, 12);
+            ctx.fillRect(x+87, y+135, 21, 12);
         }
         
         function drawSpeedometer() {
-            const x = GAME_WIDTH - 160;
-            const y = 12;
-            const r = 22;
+            const x = GAME_WIDTH - 200;
+            const y = 15;
+            const r = 33; // увеличен в 1.5 раза (было 22)
             ctx.beginPath();
             ctx.arc(x + r, y + r, r, 0, Math.PI * 2);
             ctx.fillStyle = "#1a1a1a";
@@ -580,10 +587,10 @@
             ctx.stroke();
             for (let i = 0; i <= 10; i++) {
                 let angle = -Math.PI/2 + (i / 10) * Math.PI;
-                let x1 = x + r + Math.cos(angle) * (r - 4);
-                let y1 = y + r + Math.sin(angle) * (r - 4);
-                let x2 = x + r + Math.cos(angle) * (r - 8);
-                let y2 = y + r + Math.sin(angle) * (r - 8);
+                let x1 = x + r + Math.cos(angle) * (r - 6);
+                let y1 = y + r + Math.sin(angle) * (r - 6);
+                let x2 = x + r + Math.cos(angle) * (r - 12);
+                let y2 = y + r + Math.sin(angle) * (r - 12);
                 ctx.beginPath();
                 ctx.moveTo(x1, y1);
                 ctx.lineTo(x2, y2);
@@ -591,24 +598,24 @@
                 ctx.stroke();
             }
             let angleSpeed = -Math.PI/2 + (currentSpeedKmh / 220) * Math.PI;
-            let arrowX = x + r + Math.cos(angleSpeed) * (r - 8);
-            let arrowY = y + r + Math.sin(angleSpeed) * (r - 8);
+            let arrowX = x + r + Math.cos(angleSpeed) * (r - 12);
+            let arrowY = y + r + Math.sin(angleSpeed) * (r - 12);
             ctx.beginPath();
             ctx.moveTo(x + r, y + r);
             ctx.lineTo(arrowX, arrowY);
             ctx.strokeStyle = "#ff4444";
-            ctx.lineWidth = 3;
+            ctx.lineWidth = 4;
             ctx.stroke();
             ctx.fillStyle = "#ffffaa";
             ctx.beginPath();
-            ctx.arc(x + r, y + r, 3, 0, Math.PI*2);
+            ctx.arc(x + r, y + r, 5, 0, Math.PI*2);
             ctx.fill();
-            ctx.font = "bold 28px monospace";
+            ctx.font = "bold 42px monospace";
             ctx.fillStyle = "#ffcc77";
-            ctx.fillText(`${Math.floor(currentSpeedKmh)}`, x + r + 30, y + r + 8);
-            ctx.font = "12px monospace";
+            ctx.fillText(`${Math.floor(currentSpeedKmh)}`, x + r + 45, y + r + 12);
+            ctx.font = "18px monospace";
             ctx.fillStyle = "#aaa";
-            ctx.fillText("km/h", x + r + 75, y + r + 6);
+            ctx.fillText("km/h", x + r + 113, y + r + 9);
         }
         
         function drawObjects() {
@@ -624,14 +631,14 @@
         function drawUItext() {
             drawSpeedometer();
             if (multiplierActive) {
-                ctx.font = "bold 18px monospace";
+                ctx.font = "bold 24px monospace";
                 ctx.fillStyle = "#ffe484";
-                ctx.fillText("x2 АКТИВЕН!", GAME_WIDTH-150, 70);
+                ctx.fillText("x2 АКТИВЕН!", GAME_WIDTH-180, 95);
             }
             if (isPaused && gameRunning) {
-                ctx.font = "bold 32px monospace";
+                ctx.font = "bold 42px monospace";
                 ctx.fillStyle = "#ffffaa";
-                ctx.fillText("ПАУЗА", GAME_WIDTH/2-60, GAME_HEIGHT/2);
+                ctx.fillText("ПАУЗА", GAME_WIDTH/2-80, GAME_HEIGHT/2);
             }
         }
         
@@ -706,7 +713,7 @@
             animationId = requestAnimationFrame(loop);
         }
         
-        // Управление только касанием левой/правой части экрана
+        // Управление только касанием
         function left() { if (gameRunning && !isPaused) currentLane = Math.max(0, currentLane-1); }
         function right() { if (gameRunning && !isPaused) currentLane = Math.min(2, currentLane+1); }
         
@@ -728,7 +735,6 @@
             else right();
         });
         
-        // Кнопка паузы
         pauseBtn.addEventListener('click', () => {
             if (!gameRunning) return;
             isPaused = !isPaused;
@@ -743,11 +749,11 @@
                 <div class="rules-card">
                     <h2>🚓 ДОБРО ПОЖАЛОВАТЬ 🚓</h2>
                     <ul>
-                        <li>🎯 Цель: собирайте чёрно-белые жезлы.</li>
-                        <li>✨ Бонус X2 — временно удваивает очки.</li>
-                        <li>⚠️ Не наезжайте на ямы и искусственные неровности.</li>
-                        <li>🛡️ Бронежилет — временная неуязвимость.</li>
-                        <li>📈 Повышение скорости в процессе игры.</li>
+                        <li>🎯 Цель: собирайте чёрно-белые жезлы → +1 очко.</li>
+                        <li>✨ Бонус X2 — удваивает очки на 6 сек.</li>
+                        <li>🛡️ Бронежилет — неуязвимость 5 сек (проезжайте ямы и лежачих).</li>
+                        <li>⚠️ Ямы и лежачие полицейские — авария без брони.</li>
+                        <li>📈 Скорость +10 км/ч каждые 10 сек (60 → 220).</li>
                         <li>🎮 Управление: касания по левой/правой половине экрана.</li>
                         <li>⏸️ Кнопка "Пауза" — остановить игру.</li>
                     </ul>
