@@ -40,43 +40,51 @@
             height: auto;
             background: #1b2f24;
         }
+        /* Новая шапка: центрированный текст + кнопка паузы справа */
         .game-header {
+            margin-bottom: 12px;
+            position: relative;
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-            padding: 0 6px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+            gap: 10px;
         }
-        .brand {
-            font-size: 0.4rem;
-            font-weight: 600;
-            background: rgba(0,0,0,0.55);
-            backdrop-filter: blur(6px);
-            padding: 3px 8px;
-            border-radius: 40px;
-            color: #ffdb7e;
-            border-left: 2px solid #d92525;
-            font-family: monospace;
-            display: inline-block;
+        .title-group {
+            flex: 1;
+            text-align: center;
         }
-        .brand span {
-            background: #a51c1c;
-            color: white;
-            padding: 1px 5px;
-            border-radius: 30px;
-            margin-left: 4px;
-            font-size: 0.35rem;
-        }
-        .game-title {
-            font-size: 1.1rem;
+        .main-title {
+            font-size: 1.3rem;
             font-weight: bold;
             background: rgba(0, 0, 0, 0.6);
-            padding: 5px 14px;
+            display: inline-block;
+            padding: 4px 16px;
             border-radius: 40px;
             color: #ffdd99;
             font-family: monospace;
-            letter-spacing: 1px;
+            letter-spacing: 2px;
             backdrop-filter: blur(4px);
+            margin-bottom: 4px;
+        }
+        .subtitle {
+            font-size: 0.65rem;
+            font-weight: 600;
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(6px);
+            padding: 4px 12px;
+            border-radius: 40px;
+            color: #ffdb7e;
+            display: inline-block;
+            font-family: monospace;
+        }
+        .subtitle span {
+            background: #a51c1c;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 30px;
+            margin-left: 6px;
+            font-size: 0.6rem;
         }
         .pause-btn {
             background: rgba(0,0,0,0.6);
@@ -84,11 +92,12 @@
             color: white;
             font-size: 0.9rem;
             font-weight: bold;
-            padding: 5px 12px;
+            padding: 6px 14px;
             border-radius: 40px;
             cursor: pointer;
             backdrop-filter: blur(4px);
             font-family: monospace;
+            margin-bottom: 6px;
         }
         .stats-panel {
             display: flex;
@@ -223,8 +232,10 @@
 <div>
     <div class="game-container">
         <div class="game-header">
-            <div class="brand">🚔 by Chilikin <span>разработчик</span></div>
-            <div class="game-title">ПАТРУЛЬ ДПС</div>
+            <div class="title-group">
+                <div class="main-title">ПАТРУЛЬ ДПС</div>
+                <div class="subtitle">by Chilikin <span>разработчик</span></div>
+            </div>
             <button class="pause-btn" id="pauseBtn">⏸️ ПАУЗА</button>
         </div>
 
@@ -253,18 +264,16 @@
         canvas.width = GAME_WIDTH;
         canvas.height = GAME_HEIGHT;
         
-        // Равномерные полосы: по 300 пикселей, отступы слева/справа по 50
         const LANE_WIDTH = 300;
         const LEFT_OFFSET = 50;
         const LANE_POSITIONS = [
             LEFT_OFFSET + LANE_WIDTH/2,
             LEFT_OFFSET + LANE_WIDTH/2 + LANE_WIDTH,
             LEFT_OFFSET + LANE_WIDTH/2 + 2*LANE_WIDTH
-        ]; // центры: 200, 500, 800
+        ];
         
-        // Увеличенные размеры объектов (x1.5 от оригинальных)
-        const CAR_WIDTH = 126;    // 84*1.5
-        const CAR_HEIGHT = 144;   // 96*1.5
+        const CAR_WIDTH = 126;
+        const CAR_HEIGHT = 144;
         const CAR_Y = GAME_HEIGHT - CAR_HEIGHT - 25;
         
         let gameRunning = false;
@@ -292,13 +301,12 @@
         const TYPE_VEST = 'vest';
         const TYPE_MULTI = 'multi';
         
-        // Размеры объектов (x1.5)
         const OBJECT_SIZES = {
-            staff: { w: 72, h: 8 },    // 48*1.5, 5*1.5
-            pit: { w: 195, h: 195 },   // 130*1.5
-            bump: { w: 255, h: 27 },   // 170*1.5, 18*1.5
-            vest: { w: 96, h: 126 },   // 64*1.5, 84*1.5
-            multi: { w: 60, h: 60 }    // 40*1.5
+            staff: { w: 72, h: 8 },
+            pit: { w: 195, h: 195 },
+            bump: { w: 255, h: 27 },
+            vest: { w: 96, h: 126 },
+            multi: { w: 60, h: 60 }
         };
         
         const scoreSpan = document.getElementById('scoreValue');
@@ -424,7 +432,6 @@
             }
         }
         
-        // Изменение скорости: каждые 5 секунд (300 кадров) на +10 км/ч до 250
         function updateSpeedByTime() {
             if (!gameRunning || isPaused) return;
             if (frameCounter % 300 === 0 && frameCounter !== 0) {
@@ -447,7 +454,7 @@
             }
         }
         
-        // ---------- ОТРИСОВКА (увеличенные спрайты) ----------
+        // Отрисовка
         function drawRoad() {
             ctx.fillStyle = "#2a3a2e";
             ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
@@ -630,7 +637,6 @@
         
         function drawUItext() {
             drawSpeedometer();
-            // удалена дублирующая надпись "x2 АКТИВЕН!"
             if (isPaused && gameRunning) {
                 ctx.font = "bold 42px monospace";
                 ctx.fillStyle = "#ffffaa";
@@ -638,7 +644,6 @@
             }
         }
         
-        // ---------- ИГРОВОЙ ЦИКЛ ----------
         function gameLoop() {
             if (!gameRunning) {
                 if (animationId) cancelAnimationFrame(animationId);
@@ -709,7 +714,6 @@
             animationId = requestAnimationFrame(loop);
         }
         
-        // Управление только касанием
         function left() { if (gameRunning && !isPaused) currentLane = Math.max(0, currentLane-1); }
         function right() { if (gameRunning && !isPaused) currentLane = Math.min(2, currentLane+1); }
         
