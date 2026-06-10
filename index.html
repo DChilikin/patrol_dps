@@ -564,7 +564,7 @@
     function showRules(callback) {
         const modal = document.createElement('div');
         modal.className = 'modal';
-        modal.innerHTML = `<div class="modal-card"><h2>🚓 ДОБРО ПОЖАЛОВАТЬ</h2><ul style="text-align:left;"><li>🎯 Цель: собирайте чёрно-белые жезлы.</li><li>✨ Бонус X2 — удвоение очков.</li><li>⚠️ Не наезжайте на ямы и лежачих.</li><li>🛡️ Бронежилет — неуязвимость 5 сек.</li><li>📈 Скорость растёт каждые 5 сек до 250 км/ч.</li><li>👆 Управление: касания левой/правой половины экрана.</li><li>⏸️ Кнопка "Пауза" — остановить игру.</li></ul><button id="rulesOkBtn">ТАК ТОЧНО!</button></div>`;
+        modal.innerHTML = `<div class="modal-card"><h2>🚓 ДОБРО ПОЖАЛОВАТЬ</h2><ul style="text-align:left;"><li>🎯 Цель: соберите как можно больше жезлов.</li><li>✨ Бонус X2 — временное удвоение очков.</li><li>⚠️ Не наезжайте на ямы и искусственные неровности.</li><li>🛡️ Бронежилет — временная неуязвимость.</li><li>📈 Скорость постоянно растёт.</li><li>👆 Управление: касания левой/правой половины экрана.</li><li>⏸️ Кнопка "Пауза" — остановить игру.</li></ul><button id="rulesOkBtn">ТАК ТОЧНО!</button></div>`;
         document.body.appendChild(modal);
         modal.querySelector('#rulesOkBtn').onclick = () => { modal.remove(); if(callback) callback(); };
     }
