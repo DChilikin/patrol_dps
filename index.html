@@ -98,7 +98,10 @@
             flex-shrink: 0;
         }
         .exit-btn { color: #ffaa88; font-size: 0.8rem; }
-        .pause-btn { font-size: 0.9rem; }
+        .pause-btn { 
+            font-size: 0.9rem; 
+            width: 100px;  /* фиксированная ширина */
+        }
         .stats-panel {
             display: flex;
             justify-content: space-between;
@@ -199,6 +202,21 @@
         .top1 { background: #ffd70022; color: gold; font-weight: bold; }
         .top2 { background: #c0c0c022; color: silver; font-weight: bold; }
         .top3 { background: #cd7f3222; color: #cd7f32; font-weight: bold; }
+        /* Индикатор загрузки */
+        .loading-indicator {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: #ffdd99;
+            padding: 8px 20px;
+            border-radius: 40px;
+            font-family: monospace;
+            font-size: 1rem;
+            z-index: 5000;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -229,6 +247,22 @@
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyurVIUa9bFMFV9lBxU3sUUcbnhTIA8d34J1hRKESSiVsVbnKVupZUkNUpdQAa7W8RUYA/exec';
     const API_SECRET = 'my_super_secret_key_123';
     // =================================================
+
+    // Индикатор загрузки
+    let loadingDiv = null;
+    function showLoading() {
+        if (loadingDiv) loadingDiv.remove();
+        loadingDiv = document.createElement('div');
+        loadingDiv.className = 'loading-indicator';
+        loadingDiv.innerText = '⏳ ПОДОЖДИТЕ...';
+        document.body.appendChild(loadingDiv);
+    }
+    function hideLoading() {
+        if (loadingDiv) {
+            loadingDiv.remove();
+            loadingDiv = null;
+        }
+    }
 
     // JSONP-запрос (обходит CORS)
     function jsonpRequest(action, data, callback) {
@@ -267,7 +301,9 @@
         if (password !== confirm) return "Пароли не совпадают";
         login = login.toLowerCase();
         const hashed = await hashPassword(password);
+        showLoading();
         const result = await apiRequest('register', { login, passwordHash: hashed });
+        hideLoading();
         return result.success ? null : (result.error || "Ошибка регистрации");
     }
 
@@ -277,7 +313,9 @@
     async function loginUser(login, password) {
         login = login.toLowerCase();
         const hashed = await hashPassword(password);
+        showLoading();
         const result = await apiRequest('login', { login, passwordHash: hashed });
+        hideLoading();
         if (result.success) {
             currentUserRecord = result.record || 0;
             return { success: true, record: currentUserRecord };
@@ -289,7 +327,9 @@
     async function updateUserRecord(login, newRecord) {
         if (!login) return;
         login = login.toLowerCase();
+        showLoading();
         const result = await apiRequest('update_score', { login, newScore: newRecord });
+        hideLoading();
         if (result.success && newRecord > currentUserRecord) {
             currentUserRecord = newRecord;
         }
@@ -297,7 +337,9 @@
     }
 
     async function getTopPlayers() {
+        showLoading();
         const result = await apiRequest('get_top', {});
+        hideLoading();
         return result.success ? result.top : [];
     }
 
@@ -389,7 +431,12 @@
                 if (obj.type === TYPE_STAFF) { addScore(1); roadObjects.splice(i,1); i--; continue; }
                 else if (obj.type === TYPE_PIT || obj.type === TYPE_BUMP) {
                     if (invincibleActive) { roadObjects.splice(i,1); i--; continue; }
-                    else { gameRunning = false; endGame(); return; }
+                    else { 
+                        // Авария
+                        gameRunning = false;
+                        endGame(true);
+                        return;
+                    }
                 }
                 else if (obj.type === TYPE_VEST) { activateVest(); roadObjects.splice(i,1); i--; continue; }
                 else if (obj.type === TYPE_MULTI) { activateMultiplier(); roadObjects.splice(i,1); i--; continue; }
@@ -451,14 +498,32 @@
         animationId = requestAnimationFrame(gameLoop);
     }
 
-    async function endGame() {
+    // Функция окончания игры с поддержкой аварии
+    async function endGame(isCrash = false) {
         if (animationId) cancelAnimationFrame(animationId);
-        gameRunning = false;
+        if (isCrash) {
+            await showMessagePromise("💥 АВАРИЯ!", "Вы столкнулись с препятствием!");
+        }
         if (!guestMode && currentUser && score > 0) {
             await updateUserRecord(currentUser, score);
         }
         let finalRecord = guestMode ? "не сохраняется" : currentUserRecord;
-        showMessage("🚨 КОНЕЦ СМЕНЫ", `Вы собрали ${score} жезлов. Рекорд: ${finalRecord}`, () => resetGame());
+        await showMessagePromise("🚨 КОНЕЦ СМЕНЫ", `Вы собрали ${score} жезлов. Рекорд: ${finalRecord}`);
+        resetGame();
+    }
+
+    // Показ сообщения с ожиданием нажатия ОК
+    function showMessagePromise(title, text) {
+        return new Promise((resolve) => {
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.innerHTML = `<div class="modal-card"><h2>${title}</h2><p>${text}</p><button id="msgOkBtn">ОК</button></div>`;
+            document.body.appendChild(modal);
+            modal.querySelector('#msgOkBtn').onclick = () => {
+                modal.remove();
+                resolve();
+            };
+        });
     }
 
     function resetGame() {
@@ -487,7 +552,7 @@
         animationId = requestAnimationFrame(loop);
     }
 
-    // Модальные окна
+    // Обычное сообщение (без ожидания, для правил)
     function showMessage(title, text, onClose) {
         const modal = document.createElement('div');
         modal.className = 'modal';
@@ -540,7 +605,7 @@
     function showRegisterForm() {
         const modal = document.createElement('div');
         modal.className = 'modal';
-        modal.innerHTML = `<div class="modal-card"><h2>📝 РЕГИСТРАЦИЯ</h2><input type="text" id="regLogin" placeholder="Логин"><input type="password" id="regPass" placeholder="Пароль"><input type="password" id="regConfirm" placeholder="Повторите пароль"><div style="display:flex; justify-content:center; gap:10px;"><button id="regSubmitBtn">Зарегистрироваться</button><button id="backToLoginBtn" class="secondary">Назад</button></div><div id="regError" class="error-msg"></div></div>`;
+        modal.innerHTML = `<div class="modal-card"><h2>📝 РЕГИСТРАЦИЯ</h2><input type="text" id="regLogin" placeholder="Логин"><input type="password" id="regPass" placeholder="Пароль"><input type="password" id="regConfirm" placeholder="Повторите пароль"><div style="display:flex; flex-wrap:wrap; justify-content:center; gap:10px;"><button id="regSubmitBtn">Зарегистрироваться</button><button id="backToLoginBtn" class="secondary">Назад</button></div><div id="regError" class="error-msg"></div></div>`;
         document.body.appendChild(modal);
         const loginInput = modal.querySelector('#regLogin');
         const passInput = modal.querySelector('#regPass');
@@ -555,21 +620,24 @@
             const confirm = confirmInput.value;
             const err = await registerUser(login, pass, confirm);
             if (err) { errorDiv.innerText = err; return; }
-            // После регистрации автоматически логиним
+            // Автоматический вход после регистрации
             const result = await loginUser(login, pass);
-            if (result.success) {
-                currentUser = login;
-                guestMode = false;
-                modal.remove();
-                showRules(() => startGameAfterAuth());
-            } else {
-                errorDiv.innerText = "Ошибка автоматического входа";
-            }
+            if (!result.success) { errorDiv.innerText = result.error; return; }
+            currentUser = login;
+            guestMode = false;
+            modal.remove();
+            showRules(() => startGameAfterAuth());
         };
         backBtn.onclick = () => { modal.remove(); showLoginForm(); };
     }
 
     async function showRatingModal() {
+        // Ставим игру на паузу, если она запущена
+        let wasPaused = isPaused;
+        if (gameRunning && !wasPaused) {
+            isPaused = true;
+            pauseBtn.innerText = "▶️ ПРОДОЛЖИТЬ";
+        }
         const top = await getTopPlayers();
         const modal = document.createElement('div');
         modal.className = 'modal';
@@ -585,7 +653,14 @@
         html += `</div><button id="closeRating">ЗАКРЫТЬ</button></div>`;
         modal.innerHTML = html;
         document.body.appendChild(modal);
-        modal.querySelector('#closeRating').onclick = () => modal.remove();
+        modal.querySelector('#closeRating').onclick = () => {
+            modal.remove();
+            if (gameRunning && !wasPaused) {
+                isPaused = false;
+                pauseBtn.innerText = "⏸️ ПАУЗА";
+                updateUI();
+            }
+        };
     }
 
     function exitToAuth() {
