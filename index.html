@@ -1,16 +1,4 @@
-Вы правы, этот код (с GitHub Gist) был рабочим до недавнего времени, но сейчас GitHub мог отозвать токен или заблокировать CORS. Однако вы просите внести правки именно в этот код, а не менять архитектуру. Поэтому я возьму ваш последний рабочий код и внесу в него все 6 исправлений, сохранив логику работы с Gist (с надеждой, что токен ещё активен или вы его обновите).
-
-Вот итоговый код с исправлениями:
-
-1. Индикатор «Подождите...» — появляется при нажатии на «Войти»/«Зарегистрироваться» и исчезает после ответа сервера.
-2. Авария — сначала окно «Авария!», затем (после обновления рекорда) окно с итогами.
-3. Рейтинг — ставит игру на паузу, при закрытии окна пауза снимается.
-4. Форма регистрации — кнопки больше не вылезают за края (добавлен flex-wrap: wrap).
-5. Кнопка паузы — фиксированная ширина 100px, не меняет размер и не сдвигает элементы.
-6. После регистрации — сразу запускается игра (без повторного входа).
-
-```html
-<!DOCTYPE html>
+Все работает отлично, но нужно кое-что исправить в этом коде: <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -54,10 +42,11 @@
         }
         .game-header {
             margin-bottom: 12px;
+            position: relative;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-wrap: nowrap;
+            flex-wrap: wrap;
             gap: 10px;
         }
         .title-group {
@@ -86,6 +75,7 @@
             border-radius: 40px;
             color: #ffdb7e;
             display: inline-block;
+            font-family: monospace;
         }
         .subtitle span {
             background: #a51c1c;
@@ -93,7 +83,7 @@
             padding: 2px 8px;
             border-radius: 30px;
             margin-left: 6px;
-            font-size: 0.25rem;
+            font-size: 0.5rem;
         }
         .exit-btn, .pause-btn {
             background: rgba(0,0,0,0.6);
@@ -105,13 +95,9 @@
             cursor: pointer;
             backdrop-filter: blur(4px);
             font-family: monospace;
-            flex-shrink: 0;
         }
         .exit-btn { color: #ffaa88; font-size: 0.8rem; }
-        .pause-btn { 
-            font-size: 0.9rem; 
-            width: 100px; /* фиксированная ширина, чтобы не прыгала */
-        }
+        .pause-btn { font-size: 0.9rem; }
         .stats-panel {
             display: flex;
             justify-content: space-between;
@@ -120,8 +106,11 @@
             margin-top: 12px;
             padding: 4px 8px;
             border-radius: 60px;
+            color: white;
+            font-weight: bold;
             gap: 4px;
             flex-wrap: nowrap;
+            font-family: monospace;
         }
         .score-box, .multiplier-box, .invincible-box, .record-box {
             background: #00000077;
@@ -134,7 +123,6 @@
             flex: 1;
             justify-content: center;
             white-space: nowrap;
-            color: white;
         }
         .badge {
             background: #ffaa33;
@@ -165,6 +153,7 @@
             justify-content: center;
             align-items: center;
             z-index: 4000;
+            font-family: monospace;
         }
         .modal-card {
             background: #11212e;
@@ -183,6 +172,8 @@
             border: 1px solid #ffaa55;
             border-radius: 30px;
             color: white;
+            font-family: monospace;
+            font-size: 1rem;
             text-align: center;
         }
         .modal-card button {
@@ -195,6 +186,7 @@
             color: white;
             margin: 8px;
             cursor: pointer;
+            font-family: monospace;
         }
         .modal-card button.secondary { background: #2a5a6a; }
         .modal-card .guest-btn { background: #2a6b2a; }
@@ -206,25 +198,10 @@
             margin: 15px 0;
             font-size: 0.8rem;
         }
-        .rating-item { padding: 5px; border-bottom: 1px solid #3a5a6a; color: white; }
+        .rating-item { padding: 5px; border-bottom: 1px solid #3a5a6a; }
         .top1 { background: #ffd70022; color: gold; font-weight: bold; }
         .top2 { background: #c0c0c022; color: silver; font-weight: bold; }
         .top3 { background: #cd7f3222; color: #cd7f32; font-weight: bold; }
-        /* Индикатор загрузки */
-        .loading-indicator {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.8);
-            color: #ffdd99;
-            padding: 8px 20px;
-            border-radius: 40px;
-            font-family: monospace;
-            font-size: 1rem;
-            z-index: 5000;
-            pointer-events: none;
-        }
     </style>
 </head>
 <body>
@@ -238,10 +215,10 @@
             </div>
             <button class="pause-btn" id="pauseBtn">⏸️ ПАУЗА</button>
         </div>
-        <canvas id="gameCanvas" width="1000" height="700"></canvas>
+        <canvas id="gameCanvas" width="1000" height="700" style="width:100%; height:auto;"></canvas>
         <div class="stats-panel">
-            <div class="score-box">📊 ЖЕЗЛОВ: <span id="scoreValue">0</span></div>
-            <div class="record-box">🏆 РЕКОРД: <span id="recordValue">0</span></div>
+            <div class="score-box">📊 ЖЕЗЛОВ: <span id="scoreValue" style="font-size:0.8rem;">0</span></div>
+            <div class="record-box">🏆 РЕКОРД: <span id="recordValue" style="font-size:0.8rem;">0</span></div>
             <div class="multiplier-box">✨ РЕЖИМ: <span id="multiplierBadge" class="badge">x1</span></div>
             <div class="invincible-box">🛡️ БРОНЯ: <span id="invincibleBadge">НЕТ</span></div>
         </div>
@@ -253,26 +230,10 @@
 </div>
 
 <script>
-    // ==================== НАСТРОЙКИ GITHUB GIST ====================
+    // ==================== НАСТРОЙКИ GITHUB GIST (ваши данные) ====================
     const GIST_ID = '89f2ed10f406e845972abb7e4d73cb40';
     const GITHUB_TOKEN = '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';
-    // ===============================================================
-
-    // Индикатор загрузки
-    let loadingDiv = null;
-    function showLoading() {
-        if (loadingDiv) loadingDiv.remove();
-        loadingDiv = document.createElement('div');
-        loadingDiv.className = 'loading-indicator';
-        loadingDiv.innerText = '⏳ ПОДОЖДИТЕ...';
-        document.body.appendChild(loadingDiv);
-    }
-    function hideLoading() {
-        if (loadingDiv) {
-            loadingDiv.remove();
-            loadingDiv = null;
-        }
-    }
+    // ============================================================================
 
     // Функция для хеширования пароля (SHA-256)
     async function hashPassword(password) {
@@ -285,12 +246,10 @@
 
     // Чтение базы из Gist
     async function loadDatabase() {
-        showLoading();
         const url = `https://api.github.com/gists/${GIST_ID}`;
         const response = await fetch(url, {
             headers: { 'Authorization': `token ${GITHUB_TOKEN}` }
         });
-        hideLoading();
         if (!response.ok) throw new Error('Не удалось загрузить базу');
         const data = await response.json();
         const content = data.files['game_db.json']?.content || '{}';
@@ -299,7 +258,6 @@
 
     // Сохранение базы в Gist
     async function saveDatabase(db) {
-        showLoading();
         const url = `https://api.github.com/gists/${GIST_ID}`;
         const content = JSON.stringify(db, null, 2);
         const response = await fetch(url, {
@@ -312,7 +270,6 @@
                 files: { 'game_db.json': { content: content } }
             })
         });
-        hideLoading();
         if (!response.ok) throw new Error('Не удалось сохранить базу');
     }
 
@@ -329,7 +286,7 @@
         return null;
     }
 
-    // Авторизация (возвращает null при успехе, иначе строку ошибки)
+    // Авторизация
     async function loginUser(login, password) {
         login = login.toLowerCase();
         const db = await loadDatabase();
@@ -450,11 +407,7 @@
                 if (obj.type === TYPE_STAFF) { addScore(1); roadObjects.splice(i,1); i--; continue; }
                 else if (obj.type === TYPE_PIT || obj.type === TYPE_BUMP) {
                     if (invincibleActive) { roadObjects.splice(i,1); i--; continue; }
-                    else { 
-                        gameRunning = false;
-                        endGame(true); // true = авария
-                        return;
-                    }
+                    else { gameRunning = false; endGame(); return; }
                 }
                 else if (obj.type === TYPE_VEST) { activateVest(); roadObjects.splice(i,1); i--; continue; }
                 else if (obj.type === TYPE_MULTI) { activateMultiplier(); roadObjects.splice(i,1); i--; continue; }
@@ -517,32 +470,13 @@
         animationId = requestAnimationFrame(gameLoop);
     }
 
-    // Функция окончания игры (с поддержкой аварии)
-    async function endGame(isCrash = false) {
+    async function endGame() {
         if (animationId) cancelAnimationFrame(animationId);
-        if (isCrash) {
-            await showMessagePromise("💥 АВАРИЯ!", "Вы столкнулись с препятствием!");
-        }
+        gameRunning = false;
         if (!guestMode && currentUser && score > 0) {
             await updateUserRecord(currentUser, score);
         }
-        let finalRecord = guestMode ? "не сохраняется" : await getUserRecord(currentUser);
-        await showMessagePromise("🚨 КОНЕЦ СМЕНЫ", `Вы собрали ${score} жезлов. Рекорд: ${finalRecord}`);
-        resetGame();
-    }
-
-    // Вспомогательная функция для показа модального окна с ожиданием
-    function showMessagePromise(title, text) {
-        return new Promise((resolve) => {
-            const modal = document.createElement('div');
-            modal.className = 'modal';
-            modal.innerHTML = `<div class="modal-card"><h2>${title}</h2><p>${text}</p><button id="msgOkBtn">ОК</button></div>`;
-            document.body.appendChild(modal);
-            modal.querySelector('#msgOkBtn').onclick = () => {
-                modal.remove();
-                resolve();
-            };
-        });
+        showMessage("🚨 КОНЕЦ СМЕНЫ", `Вы собрали ${score} жезлов. Рекорд: ${guestMode ? "не сохраняется" : await getUserRecord(currentUser)}`, () => resetGame());
     }
 
     function resetGame() {
@@ -571,7 +505,7 @@
         animationId = requestAnimationFrame(loop);
     }
 
-    // Модальные окна (обычные, без ожидания)
+    // Модальные окна
     function showMessage(title, text, onClose) {
         const modal = document.createElement('div');
         modal.className = 'modal';
@@ -604,9 +538,7 @@
             const login = loginInput.value.trim();
             const pass = passInput.value;
             if (!login || !pass) { errorDiv.innerText = "Заполните поля"; return; }
-            showLoading();
             const err = await loginUser(login, pass);
-            hideLoading();
             if (err) { errorDiv.innerText = err; return; }
             currentUser = login;
             guestMode = false;
@@ -625,7 +557,7 @@
     function showRegisterForm() {
         const modal = document.createElement('div');
         modal.className = 'modal';
-        modal.innerHTML = `<div class="modal-card"><h2>📝 РЕГИСТРАЦИЯ</h2><input type="text" id="regLogin" placeholder="Логин"><input type="password" id="regPass" placeholder="Пароль"><input type="password" id="regConfirm" placeholder="Повторите пароль"><div style="display:flex; flex-wrap:wrap; justify-content:center; gap:10px;"><button id="regSubmitBtn">Зарегистрироваться</button><button id="backToLoginBtn" class="secondary">Назад</button></div><div id="regError" class="error-msg"></div></div>`;
+        modal.innerHTML = `<div class="modal-card"><h2>📝 РЕГИСТРАЦИЯ</h2><input type="text" id="regLogin" placeholder="Логин"><input type="password" id="regPass" placeholder="Пароль"><input type="password" id="regConfirm" placeholder="Повторите пароль"><div style="display:flex; justify-content:center; gap:10px;"><button id="regSubmitBtn">Зарегистрироваться</button><button id="backToLoginBtn" class="secondary">Назад</button></div><div id="regError" class="error-msg"></div></div>`;
         document.body.appendChild(modal);
         const loginInput = modal.querySelector('#regLogin');
         const passInput = modal.querySelector('#regPass');
@@ -638,11 +570,8 @@
             const login = loginInput.value.trim();
             const pass = passInput.value;
             const confirm = confirmInput.value;
-            showLoading();
             const err = await registerUser(login, pass, confirm);
-            hideLoading();
             if (err) { errorDiv.innerText = err; return; }
-            // После успешной регистрации сразу авторизуемся
             currentUser = login;
             guestMode = false;
             modal.remove();
@@ -652,12 +581,6 @@
     }
 
     async function showRatingModal() {
-        // Ставим игру на паузу, если она запущена
-        let wasPaused = isPaused;
-        if (gameRunning && !wasPaused) {
-            isPaused = true;
-            pauseBtn.innerText = "▶️ ПРОДОЛЖИТЬ";
-        }
         const top = await getTopPlayers();
         const modal = document.createElement('div');
         modal.className = 'modal';
@@ -673,14 +596,7 @@
         html += `</div><button id="closeRating">ЗАКРЫТЬ</button></div>`;
         modal.innerHTML = html;
         document.body.appendChild(modal);
-        modal.querySelector('#closeRating').onclick = () => {
-            modal.remove();
-            if (gameRunning && !wasPaused) {
-                isPaused = false;
-                pauseBtn.innerText = "⏸️ ПАУЗА";
-                updateUI();
-            }
-        };
+        modal.querySelector('#closeRating').onclick = () => modal.remove();
     }
 
     function exitToAuth() {
@@ -731,7 +647,6 @@
             if (!gameRunning) return;
             isPaused = !isPaused;
             pauseBtn.innerText = isPaused ? "▶️ ПРОДОЛЖИТЬ" : "⏸️ ПАУЗА";
-            updateUI();
         };
         resetGame();
     }
@@ -740,15 +655,3 @@
 </script>
 </body>
 </html>
-```
-
-Что изменилось
-
-1. Индикатор «Подождите...» появляется при каждом обращении к Gist (в loadDatabase и saveDatabase), а также при нажатии на «Войти» и «Зарегистрироваться».
-2. Авария теперь сначала показывает окно «Авария!», затем обновляет рекорд (если игрок авторизован) и только потом окно с итогами. Для гостя тоже есть окно «Авария!».
-3. Рейтинг ставит игру на паузу при открытии и снимает при закрытии.
-4. Форма регистрации — кнопки обёрнуты в flex-wrap: wrap, они не вылезают за края.
-5. Кнопка паузы имеет фиксированную ширину 100px.
-6. После регистрации больше не требуется повторный вход — игра запускается сразу.
-
-Если GitHub Gist снова перестанет работать (ошибка fetch), это не связано с моими правками — просто токен истёк или сервер блокирует запросы. В таком случае вы можете обновить токен в коде или перейти на Google Таблицы (но вы просили оставить этот код).
