@@ -100,7 +100,7 @@
         .exit-btn { color: #ffaa88; font-size: 0.8rem; }
         .pause-btn { 
             font-size: 0.9rem; 
-            width: 100px;  /* фиксированная ширина */
+            width: 100px;
         }
         .stats-panel {
             display: flex;
@@ -162,8 +162,12 @@
             padding: 24px;
             width: 320px;
             text-align: center;
-            border: 2px solid #ffaa55;
+            border: 2px solid #ff4444; /* красная окантовка */
             color: white;
+        }
+        .modal-card h2 {
+            font-size: 1.8rem; /* увеличенный шрифт (в 1.5 раза от стандартного 1.2rem) */
+            margin-top: 0;
         }
         .modal-card input {
             width: 100%;
@@ -307,7 +311,6 @@
         return result.success ? null : (result.error || "Ошибка регистрации");
     }
 
-    // Храним текущий рекорд авторизованного пользователя в переменной
     let currentUserRecord = 0;
 
     async function loginUser(login, password) {
@@ -369,7 +372,14 @@
     const CAR_HEIGHT = 144;
     const CAR_Y = GAME_HEIGHT - CAR_HEIGHT - 25;
     const TYPE_STAFF = 'staff', TYPE_PIT = 'pit', TYPE_BUMP = 'bump', TYPE_VEST = 'vest', TYPE_MULTI = 'multi';
-    const OBJECT_SIZES = { staff: { w: 72, h: 8 }, pit: { w: 195, h: 195 }, bump: { w: 255, h: 27 }, vest: { w: 96, h: 126 }, multi: { w: 60, h: 60 } };
+    // Уменьшенные хитбоксы для препятствий
+    const OBJECT_SIZES = { 
+        staff: { w: 72, h: 8 }, 
+        pit: { w: 140, h: 140 },    // было 195
+        bump: { w: 240, h: 20 },    // было 255x27
+        vest: { w: 96, h: 126 }, 
+        multi: { w: 60, h: 60 } 
+    };
     let canvas, ctx, scoreSpan, recordSpan, multiplierBadge, invincibleSpan, pauseBtn, ratingBtn, exitBtn;
 
     function kmhToSpeed(kmh) { return kmh * (3.2 / 60); }
@@ -432,7 +442,6 @@
                 else if (obj.type === TYPE_PIT || obj.type === TYPE_BUMP) {
                     if (invincibleActive) { roadObjects.splice(i,1); i--; continue; }
                     else { 
-                        // Авария
                         gameRunning = false;
                         endGame(true);
                         return;
@@ -473,6 +482,7 @@
         }
     }
 
+    // Отрисовка (сокращённо, но полная)
     function drawRoad() {
         ctx.fillStyle = "#2a3a2e"; ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
         ctx.fillStyle = "#1f2c24"; ctx.fillRect(LEFT_OFFSET, 0, GAME_WIDTH - 2*LEFT_OFFSET, GAME_HEIGHT);
@@ -498,7 +508,7 @@
         animationId = requestAnimationFrame(gameLoop);
     }
 
-    // Функция окончания игры с поддержкой аварии
+    // Функция окончания игры с поддержкой аварии и отображением места в рейтинге
     async function endGame(isCrash = false) {
         if (animationId) cancelAnimationFrame(animationId);
         if (isCrash) {
@@ -508,7 +518,13 @@
             await updateUserRecord(currentUser, score);
         }
         let finalRecord = guestMode ? "не сохраняется" : currentUserRecord;
-        await showMessagePromise("🚨 КОНЕЦ СМЕНЫ", `Вы собрали ${score} жезлов. Рекорд: ${finalRecord}`);
+        let rankText = "";
+        if (!guestMode && currentUser) {
+            const topList = await getTopPlayers();
+            const position = topList.findIndex(p => p.login === currentUser) + 1;
+            if (position > 0) rankText = ` Вы находитесь на ${position} месте.`;
+        }
+        await showMessagePromise("🚨 КОНЕЦ СМЕНЫ", `Вы собрали ${score} жезлов. Рекорд: ${finalRecord}.${rankText}`);
         resetGame();
     }
 
@@ -620,7 +636,6 @@
             const confirm = confirmInput.value;
             const err = await registerUser(login, pass, confirm);
             if (err) { errorDiv.innerText = err; return; }
-            // Автоматический вход после регистрации
             const result = await loginUser(login, pass);
             if (!result.success) { errorDiv.innerText = result.error; return; }
             currentUser = login;
@@ -632,7 +647,6 @@
     }
 
     async function showRatingModal() {
-        // Ставим игру на паузу, если она запущена
         let wasPaused = isPaused;
         if (gameRunning && !wasPaused) {
             isPaused = true;
@@ -692,7 +706,6 @@
 
         updateUI();
 
-        // ========== ИСПРАВЛЕННЫЕ ФУНКЦИИ left / right ==========
         function left() { 
             if (gameRunning && !isPaused) {
                 let newLane = currentLane - 1;
@@ -707,22 +720,20 @@
                 currentLane = Math.max(0, Math.min(2, newLane));
             }
         }
-        // ========================================================
 
-        // ========== ИСПРАВЛЕННЫЕ ОБРАБОТЧИКИ КАСАНИЙ ==========
         canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
             if (!gameRunning || isPaused) return;
             const rect = canvas.getBoundingClientRect();
             const scaleX = GAME_WIDTH / rect.width;
             const touchX = (e.touches[0].clientX - rect.left) * scaleX;
-            const zone = touchX / GAME_WIDTH; // от 0 до 1
+            const zone = touchX / GAME_WIDTH;
             if (zone < 0.33) {
                 left();
             } else if (zone > 0.66) {
                 right();
             } else {
-                currentLane = 1; // явно ставим на среднюю полосу
+                currentLane = 1;
             }
         });
         canvas.addEventListener('mousedown', (e) => {
@@ -739,7 +750,6 @@
                 currentLane = 1;
             }
         });
-        // ========================================================
 
         pauseBtn.onclick = () => {
             if (!gameRunning) return;
@@ -750,7 +760,6 @@
         resetGame();
     }
 
-    // Запуск
     showLoginForm();
 </script>
 </body>
