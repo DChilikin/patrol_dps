@@ -533,15 +533,26 @@
             await updateUserRecord(currentUser, score);
         }
         let finalRecord = guestMode ? "не сохраняется" : currentUserRecord;
+        
         let rankText = "";
         if (!guestMode && currentUser) {
-            const topList = await getTopPlayers();
-            const position = topList.findIndex(p => p.login === currentUser) + 1;
-            if (position > 0) rankText = ` Вы находитесь на ${position} месте.`;
-        }
-        await showMessagePromise("🚨 КОНЕЦ СМЕНЫ", `Вы собрали ${score} жезлов. Рекорд: ${finalRecord}.${rankText}`);
-        resetGame();
+            try {
+                const topList = await getTopPlayers();
+                // Убедимся, что в topList есть поле score (или record)
+                const position = topList.findIndex(p => p.login === currentUser) + 1;
+                if (position > 0) {
+                    rankText = ` Вы находитесь на ${position} месте.`;
+                } else {
+                    console.warn("Пользователь не найден в рейтинге", currentUser);
+                }
+            } catch(e) {
+                console.error("Ошибка получения рейтинга", e);
+            }
     }
+    
+    await showMessagePromise("🚨 КОНЕЦ СМЕНЫ", `Вы собрали ${score} жезлов. Рекорд: ${finalRecord}.${rankText}`);
+    resetGame();
+}
 
     // Показ сообщения с ожиданием нажатия ОК
     function showMessagePromise(title, text) {
