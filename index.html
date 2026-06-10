@@ -165,10 +165,6 @@
             border: 2px solid #ff4444; /* красная окантовка */
             color: white;
         }
-        .modal-card h2 {
-            font-size: 1.8rem; /* увеличенный шрифт (в 1.5 раза от стандартного 1.2rem) */
-            margin-top: 0;
-        }
         .modal-card input {
             width: 100%;
             padding: 10px;
@@ -242,7 +238,7 @@
     </div>
     <div style="text-align: center; margin-top: 10px;">
         <div class="controls-hint">👆 КАСАЙСЯ ЛЕВОЙ / ПРАВОЙ ПОЛОВИНЫ ЭКРАНА</div>
-        <button id="ratingBtn" style="background:#000000aa; border:none; color:white; border-radius:40px; padding:4px 12px; margin-top:6px;">🏆 РЕЙТИНГ ТОП-100</button>
+        <button id="ratingBtn" style="background:#000000aa; border: 2px solid #ff4444; border-radius:40px; padding:6px 12px; margin-top:6px; font-size:1.2rem; font-weight:bold; color:white;">🏆 ТОП-100 ИГРОКОВ</button>
     </div>
 </div>
 
@@ -372,11 +368,13 @@
     const CAR_HEIGHT = 144;
     const CAR_Y = GAME_HEIGHT - CAR_HEIGHT - 25;
     const TYPE_STAFF = 'staff', TYPE_PIT = 'pit', TYPE_BUMP = 'bump', TYPE_VEST = 'vest', TYPE_MULTI = 'multi';
-    // Уменьшенные хитбоксы для препятствий
-    const OBJECT_SIZES = { 
-        staff: { w: 72, h: 8 }, 
-        pit: { w: 140, h: 140 },    // было 195
-        bump: { w: 240, h: 20 },    // было 255x27
+    // Визуальные размеры (для рисования) остаются прежними
+    const VISUAL_SIZES = { staff: { w: 72, h: 8 }, pit: { w: 195, h: 195 }, bump: { w: 255, h: 27 }, vest: { w: 96, h: 126 }, multi: { w: 60, h: 60 } };
+    // Уменьшенные хитбоксы для коллизий, чтобы избежать ложных срабатываний
+    const COLLISION_SIZES = { 
+        staff: { w: 72, h: 8 },   // жезл оставляем как есть
+        pit: { w: 130, h: 130 },   // яма меньше визуальной
+        bump: { w: 220, h: 20 },   // лежачий полицейский уже
         vest: { w: 96, h: 126 }, 
         multi: { w: 60, h: 60 } 
     };
@@ -422,9 +420,15 @@
         else if (r < 0.82) type = Math.random() < 0.6 ? TYPE_PIT : TYPE_BUMP;
         else type = Math.random() < 0.6 ? TYPE_VEST : TYPE_MULTI;
         let lane = Math.floor(Math.random() * 3);
-        let size = OBJECT_SIZES[type];
-        let x = LANE_POSITIONS[lane] - size.w/2;
-        roadObjects.push({ type, x, y: -size.h, w: size.w, h: size.h, angle: 0 });
+        let visualSize = VISUAL_SIZES[type];
+        let x = LANE_POSITIONS[lane] - visualSize.w/2;
+        // Сохраняем визуальные размеры и хитбокс
+        roadObjects.push({ 
+            type, x, y: -visualSize.h, 
+            visualW: visualSize.w, visualH: visualSize.h,
+            collisionW: COLLISION_SIZES[type].w, collisionH: COLLISION_SIZES[type].h,
+            angle: 0 
+        });
     }
 
     function updateObjects() {
@@ -435,7 +439,10 @@
             let obj = roadObjects[i];
             obj.y += currentSpeed;
             if (obj.type === TYPE_STAFF) obj.angle = (obj.angle || 0) + 0.12;
-            let rect = { x: obj.x, y: obj.y, w: obj.w, h: obj.h };
+            // Используем хитбокс для коллизии (центрируем относительно визуального прямоугольника)
+            let collisionX = obj.x + (obj.visualW - obj.collisionW) / 2;
+            let collisionY = obj.y + (obj.visualH - obj.collisionH) / 2;
+            let rect = { x: collisionX, y: collisionY, w: obj.collisionW, h: obj.collisionH };
             if (rect.y + rect.h > CAR_Y && rect.y < CAR_Y + CAR_HEIGHT &&
                 rect.x < carRect.x + carRect.w && rect.x + rect.w > carRect.x) {
                 if (obj.type === TYPE_STAFF) { addScore(1); roadObjects.splice(i,1); i--; continue; }
@@ -482,7 +489,7 @@
         }
     }
 
-    // Отрисовка (сокращённо, но полная)
+    // Отрисовка (используем визуальные размеры)
     function drawRoad() {
         ctx.fillStyle = "#2a3a2e"; ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
         ctx.fillStyle = "#1f2c24"; ctx.fillRect(LEFT_OFFSET, 0, GAME_WIDTH - 2*LEFT_OFFSET, GAME_HEIGHT);
@@ -498,7 +505,15 @@
     function drawMulti(x,y,w,h) { ctx.font="bold 42px monospace"; ctx.fillStyle="#FF0000"; ctx.fillText("X",x+6,y+45); ctx.fillStyle="#FFFF00"; ctx.fillText("2",x+33,y+48); }
     function drawCar(x,y) { ctx.fillStyle="#f5f5f5"; ctx.fillRect(x+12,y+30,102,108); ctx.fillStyle="#3a4f66"; ctx.fillRect(x+27,y+42,27,42); ctx.fillRect(x+72,y+42,27,42); ctx.fillStyle="#1f4880"; ctx.fillRect(x+12,y+90,102,18); ctx.fillStyle="#fff"; ctx.font="bold 15px monospace"; ctx.fillText("ДПС",x+48,y+105); ctx.font="12px monospace"; ctx.fillStyle="#ffdd99"; ctx.fillText("ПОЛИЦИЯ",x+39,y+117); ctx.fillStyle="#d33"; ctx.fillRect(x+18,y+78,15,18); ctx.fillRect(x+93,y+78,15,18); ctx.fillStyle="#fff"; ctx.fillRect(x+42,y+132,42,12); ctx.fillStyle="#000"; ctx.font="9px monospace"; ctx.fillText("A123BC",x+45,y+143); let red=(Math.sin(Date.now()*0.015)>0)?"#f44":"#faa"; let blue=(Math.sin(Date.now()*0.015+2)>0)?"#44f":"#aaf"; ctx.fillStyle=red; ctx.fillRect(x+30,y+12,18,12); ctx.fillStyle=blue; ctx.fillRect(x+78,y+12,18,12); ctx.fillStyle="rgba(255,0,0,0.3)"; ctx.fillRect(x+27,y+6,24,6); ctx.fillStyle="rgba(0,0,255,0.3)"; ctx.fillRect(x+75,y+6,24,6); ctx.fillStyle="#222"; ctx.fillRect(x+18,y+135,21,12); ctx.fillRect(x+87,y+135,21,12); }
     function drawSpeedometer() { const x=GAME_WIDTH-200, y=15, r=33; ctx.beginPath(); ctx.arc(x+r,y+r,r,0,Math.PI*2); ctx.fillStyle="#1a1a1a"; ctx.fill(); ctx.strokeStyle="#ddd"; ctx.stroke(); for(let i=0;i<=10;i++){ let ang=-Math.PI/2+(i/10)*Math.PI; let x1=x+r+Math.cos(ang)*(r-6); let y1=y+r+Math.sin(ang)*(r-6); let x2=x+r+Math.cos(ang)*(r-12); let y2=y+r+Math.sin(ang)*(r-12); ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.strokeStyle="#ccc"; ctx.stroke(); } let ang=-Math.PI/2+(currentSpeedKmh/250)*Math.PI; let ax=x+r+Math.cos(ang)*(r-12); let ay=y+r+Math.sin(ang)*(r-12); ctx.beginPath(); ctx.moveTo(x+r,y+r); ctx.lineTo(ax,ay); ctx.strokeStyle="#f44"; ctx.lineWidth=4; ctx.stroke(); ctx.fillStyle="#ffffaa"; ctx.beginPath(); ctx.arc(x+r,y+r,5,0,Math.PI*2); ctx.fill(); ctx.font="bold 42px monospace"; ctx.fillStyle="#ffcc77"; ctx.fillText(Math.floor(currentSpeedKmh), x+r+45, y+r+12); ctx.font="18px monospace"; ctx.fillStyle="#aaa"; ctx.fillText("km/h", x+r+113, y+r+9); }
-    function drawObjects() { for(let obj of roadObjects) { if(obj.type===TYPE_STAFF) drawStaff(obj.x,obj.y,obj.w,obj.h,obj.angle); else if(obj.type===TYPE_BUMP) drawBump(obj.x,obj.y,obj.w,obj.h); else if(obj.type===TYPE_PIT) drawPit(obj.x,obj.y,obj.w,obj.h); else if(obj.type===TYPE_VEST) drawVest(obj.x,obj.y,obj.w,obj.h); else if(obj.type===TYPE_MULTI) drawMulti(obj.x,obj.y,obj.w,obj.h); } }
+    function drawObjects() { 
+        for(let obj of roadObjects) { 
+            if(obj.type===TYPE_STAFF) drawStaff(obj.x, obj.y, obj.visualW, obj.visualH, obj.angle); 
+            else if(obj.type===TYPE_BUMP) drawBump(obj.x, obj.y, obj.visualW, obj.visualH); 
+            else if(obj.type===TYPE_PIT) drawPit(obj.x, obj.y, obj.visualW, obj.visualH); 
+            else if(obj.type===TYPE_VEST) drawVest(obj.x, obj.y, obj.visualW, obj.visualH); 
+            else if(obj.type===TYPE_MULTI) drawMulti(obj.x, obj.y, obj.visualW, obj.visualH); 
+        } 
+    }
     function drawUI() { drawSpeedometer(); if(isPaused && gameRunning){ ctx.font="bold 42px monospace"; ctx.fillStyle="#ffffaa"; ctx.fillText("ПАУЗА", GAME_WIDTH/2-80, GAME_HEIGHT/2); } }
 
     function gameLoop() {
@@ -636,6 +651,7 @@
             const confirm = confirmInput.value;
             const err = await registerUser(login, pass, confirm);
             if (err) { errorDiv.innerText = err; return; }
+            // Автоматический вход после регистрации
             const result = await loginUser(login, pass);
             if (!result.success) { errorDiv.innerText = result.error; return; }
             currentUser = login;
